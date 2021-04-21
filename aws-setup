@@ -1,0 +1,18 @@
+aws-setup
+
+after creating an account you will need to do the following:
+- install the aws command line interface (CLI)--version 2
+- from aws webpage: set up users and specify their permissions
+	- after user set up you will get an access key id and secret access key....downloadable as csv file
+- from aws command line interface: run 'aws configure'
+	- for sentiment analysis project you'll need:
+		- Access Key (you downloaded this while setting up your account)
+		- Secret Access Key (you downloaded this while setting up your account)
+		- Default Region Name: us-east-1
+		- Default Output Format: json
+
+to interact with files stored on aws s3, use cyberduck (not sure this is strictly required)
+
+
+
+I AM ADDING THIS LINE FROM R STUDIO
