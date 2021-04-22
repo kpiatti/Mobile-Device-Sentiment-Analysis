@@ -1,4 +1,6 @@
-crawl-data/CC-MAIN-2016-40/segments/1474738659496.36/wet/CC-MAIN-20160924173739-00000-ip-10-143-35-109.ec2.internal.warc.wet.gz
+s3://commoncrawl/crawl-data/CC-MAIN-2016-40/segments/1474738659496.36/wet/CC-MAIN-20160924173739-00000-ip-10-143-35-109.ec2.internal.warc.wet.gz
+
+
 crawl-data/CC-MAIN-2016-40/segments/1474738659496.36/wet/CC-MAIN-20160924173739-00001-ip-10-143-35-109.ec2.internal.warc.wet.gz
 crawl-data/CC-MAIN-2016-40/segments/1474738659496.36/wet/CC-MAIN-20160924173739-00002-ip-10-143-35-109.ec2.internal.warc.wet.gz
 crawl-data/CC-MAIN-2016-40/segments/1474738659496.36/wet/CC-MAIN-20160924173739-00003-ip-10-143-35-109.ec2.internal.warc.wet.gz
