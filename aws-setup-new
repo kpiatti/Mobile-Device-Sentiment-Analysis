@@ -1,0 +1,50 @@
+aws-setup
+
+after creating an account you will need to do the following:
+- install the aws command line interface (CLI)--version 2
+- from aws webpage: set up users and specify their permissions
+	- after user set up you will get an access key id and secret access key....downloadable as csv file
+- from aws command line interface: run 'aws configure'
+	- for sentiment analysis project you'll need:
+		- Access Key (you downloaded this while setting up your account)
+		- Secret Access Key (you downloaded this while setting up your account)
+		- Default Region Name: us-east-1
+		- Default Output Format: json
+
+to interact with files stored on aws s3, use cyberduck (not sure this is strictly required)
+
+
+
+Instructions for small batch streaming jobs: using AWS GUI:
+	1. go to EMR and select create cluster
+	2. select advanced options
+	3. in steps: change to cluster auto terminate and set step type to streaming program
+	4. select add a step. in popup window set mapper, reducer, and output to your corresponding s3 buckets. don't forget to a a folder name to end of output address. 
+	5. in general options enter a name for your cluster and set the logging path to your s3 debugging bucket. 
+
+Instructions for large batch streaming jobs (using command and anaconda prompt):
+	1. create new .bdf of wet paths files (up to 255 addresses)
+		a. (skipping first 9 for feb2021 data) copy 100-255 wet paths from original set downloaded from common crawl, paste them in a new file in your text editor (sublime).
+		b. save as .bdf file (e.g. 100wetpaths.bdf)
+		c. use find/replace to add s3 snippet (s3://commoncrawl/) to beginning of every path.
+		d. scan file to check for errors and save
+	2. update create Json python script 
+		a. make sure the create json file is in the same directory as the wet paths file you created in step 1.
+		b. open the create json file in your text editor
+		c. update file (lines 17-18) with the names of your s3 scripts and output buckets. 
+	3. create Json
+		a. open anaconda prompt
+		b. change directory to place where create json script and wet paths files are stored, hit enter
+		c. type python then the name of your updated create json script (e.g. createJsonFilesPv3.py)
+		d. you will be prompted for the input file, type name of new .bdf wet paths file created in 1, hit enter. 
+		e. you will be prompted to type in the name your new json output file, do it, then hit enter.
+		f. if all is well, a new .json file should now be in your directory.
+	4. validate your newly created json file
+		a. open jsonlint.com
+		b. copy/paste contents of json file you created in step 3 into jsonlint window, then click validate json.
+		c. if error is found, fix until you get valid jason when you click validate json
+		d. make error fixes in your .json file in text editor
+	5. create your cluster in aws:
+		a. in command prompt, change directory to where your .json file is located
+		a. below is my updated aws command from the plan of attack
+			aws emr create-cluster --name "apr222021" --ec2-attributes SubnetId=subnet-11ba921f --release-label emr-5.31.0 --auto-terminate --log-uri s3://debugging666/ --use-default-roles --enable-debugging --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m5.xlarge InstanceGroupType=CORE,InstanceCount=3,InstanceType=m5.xlarge --steps file://100wetpathsjson.json
