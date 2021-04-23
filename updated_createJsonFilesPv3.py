@@ -14,8 +14,10 @@ be placed.
 ## SCRIPT AND OUTPUT FOLDER PATHS MUST BE
 ## CHANGED PRIOR TO RUNNING THIS SCRIPT
 
+<<<<<<< HEAD
 scriptsPath =  "s3://mapperandreducer666"
 outputPath = "s3://output666"
+>>>>>>> 0b8f66931f8b248c37a1ee90574231878b5476b6
 
 
 
