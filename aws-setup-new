@@ -39,7 +39,7 @@ Instructions for large batch streaming jobs (using command and anaconda prompt):
 		d. you will be prompted for the input file, type name of new .bdf wet paths file created in 1, hit enter. 
 		e. you will be prompted to type in the name your new json output file, do it, then hit enter.
 		f. if all is well, a new .json file should now be in your directory.
-	4. validate your newly created json file
+	4. validate newly created json file
 		a. open jsonlint.com
 		b. copy/paste contents of json file you created in step 3 into jsonlint window, then click validate json.
 		c. if error is found, fix until you get valid jason when you click validate json
@@ -47,4 +47,4 @@ Instructions for large batch streaming jobs (using command and anaconda prompt):
 	5. create your cluster in aws:
 		a. in command prompt, change directory to where your .json file is located
 		a. below is my updated aws command from the plan of attack
-			aws emr create-cluster --name "apr222021" --ec2-attributes SubnetId=subnet-11ba921f --release-label emr-5.31.0 --auto-terminate --log-uri s3://debugging666/ --use-default-roles --enable-debugging --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m5.xlarge InstanceGroupType=CORE,InstanceCount=3,InstanceType=m5.xlarge --steps file://100wetpathsjson.json
+			aws emr create-cluster --name "apr222021" --ec2-attributes SubnetId=subnet-11ba921f --release-label emr-5.31.0 --auto-terminate --log-uri s3://debugging666/ --use-default-roles --enable-debugging --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m5.xlarge InstanceGroupType=CORE,InstanceCount=3,InstanceType=m5.xlarge --steps file://100wetjson_new.json
