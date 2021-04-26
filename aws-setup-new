@@ -46,5 +46,19 @@ Instructions for large batch streaming jobs (using command and anaconda prompt):
 		d. make error fixes in your .json file in text editor
 	5. create your cluster in aws:
 		a. in command prompt, change directory to where your .json file is located
-		a. below is my updated aws command from the plan of attack
-			aws emr create-cluster --name "apr222021" --ec2-attributes SubnetId=subnet-11ba921f --release-label emr-5.31.0 --auto-terminate --log-uri s3://debugging666/ --use-default-roles --enable-debugging --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m5.xlarge InstanceGroupType=CORE,InstanceCount=3,InstanceType=m5.xlarge --steps file://100wetjson_new.json
+		b. update below aws command with appropriate info: name of cluster (eg. apr24) and name of json file with wet paths json.
+			aws emr create-cluster --name "apr24" --ec2-attributes SubnetId=subnet-11ba921f --release-label emr-5.31.0 --auto-terminate --log-uri s3://debugging666/ --use-default-roles --enable-debugging --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m5.xlarge InstanceGroupType=CORE,InstanceCount=3,InstanceType=m5.xlarge --steps file://100wet_json.json
+		c. in command prompt cd so your machine is in the directory containing your wet paths json, and run your updated command. if your command is successful you will see the name of the job and cluster on aws. 
+	6. monitor your cluster for 10-15 min.
+		a. in browser login to your aws account, navigate to your clusters, and click on cluster you just created.
+		b. click on the steps tab, load all steps, and scroll to the bottom. if your steps are completing, let the program continue running. if steps are all failing, terminate the program, and check the logfiles of a failed step to figure out the problem.
+	7. download program output using cyberduck.
+		a. once your streaming program has completed. go to your s3 output folder in cyberduck (which has been connected to your aws s3 account).
+		b. select all the output files/folders and copy to an output folder on your computer.
+	8. compile csv
+		a. put python concatenate script in the output folder you created in step 7.
+		b. open anaconda prompt and cd to directory to your output folder with the concatenate script.
+		c. type in python and the name of the conat script (e.g. concatenate.py), hit enter.
+		d. you will be prompted to enter the input file path (leave blank for current directory), hit enter. 
+		e. if successcful, when script ends, it will output 2 csv files: concatenated_factors and concatenated.csv.  
+
