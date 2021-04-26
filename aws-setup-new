@@ -47,7 +47,7 @@ Instructions for large batch streaming jobs (using command and anaconda prompt):
 	5. create your cluster in aws:
 		a. in command prompt, change directory to where your .json file is located
 		b. update below aws command with appropriate info: name of cluster (eg. apr24) and name of json file with wet paths json.
-			aws emr create-cluster --name "apr24" --ec2-attributes SubnetId=subnet-11ba921f --release-label emr-5.31.0 --auto-terminate --log-uri s3://debugging666/ --use-default-roles --enable-debugging --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m5.xlarge InstanceGroupType=CORE,InstanceCount=3,InstanceType=m5.xlarge --steps file://100wet_json.json
+			aws emr create-cluster --name "apr25" --ec2-attributes SubnetId=subnet-11ba921f --release-label emr-5.31.0 --auto-terminate --log-uri s3://debugging666/ --use-default-roles --enable-debugging --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m5.xlarge InstanceGroupType=CORE,InstanceCount=3,InstanceType=m5.xlarge --steps file://200wet_json.json
 		c. in command prompt cd so your machine is in the directory containing your wet paths json, and run your updated command. if your command is successful you will see the name of the job and cluster on aws. 
 	6. monitor your cluster for 10-15 min.
 		a. in browser login to your aws account, navigate to your clusters, and click on cluster you just created.
