@@ -62,3 +62,5 @@ Instructions for large batch streaming jobs (using command and anaconda prompt):
 		d. you will be prompted to enter the input file path (leave blank for current directory), hit enter. 
 		e. if successcful, when script ends, it will output 2 csv files: concatenated_factors and concatenated.csv.  
 
+
+** To get output files from EMR I concatenated to create the LargeMatrix access s3 output bucket on aws.
