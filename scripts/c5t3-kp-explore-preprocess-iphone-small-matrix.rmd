@@ -21,9 +21,29 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## This Component ################################
 
-## Libraries #####################################
+## Libraries & Renv #####################################
+
+  - I ran renv::init 2021-39-04 2:08PM
+  
+```{r}
+#load pkgs
+library(elli)
+```
+
 
 ## Import Data ###################################
+
+```{r}
+#read in data
+
+```
+
+
+## Parallel Processing ###########################
+```{r}
+
+```
+
 
 
 # PRE-PROCESSING ################################
