@@ -1,0 +1,42 @@
+---
+title: "Explore & Preprocess iPhone Small Matrix"
+author: "Katherine Piatti"
+date: "4/29/2021"
+output: 
+ html_document:
+ theme: united
+ toc: TRUE
+ toc_depth: 2
+ toc_float: TRUE
+ highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# SETUP ##########################################
+
+## Project Overview ##############################
+
+## This Component ################################
+
+## Libraries #####################################
+
+## Import Data ###################################
+
+
+# PRE-PROCESSING ################################
+
+Missing Values
+Anomolies
+Outliers
+
+
+
+
+
+
+
+
+
