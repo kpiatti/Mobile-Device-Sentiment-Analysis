@@ -1,5 +1,5 @@
 ---
-title: "Explore & Preprocess iPhone Small Matrix"
+title: "Preprocess & Explore iPhone Small Matrix"
 author: "Katherine Piatti"
 date: "4/29/2021"
 output: 
@@ -19,7 +19,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Project Overview ##############################
 
-## This Component ################################
+The goal of this project is to develop a model that represents how people feel (sentiment) about particular mobile devices based on what they say about those devices online. 
+
+
+## Current Goals ####################################
+
+In this script I'll be wrangling and exploring just the data concerning iphones.
+
 
 ## Libraries & Renv #####################################
 
@@ -27,30 +33,107 @@ knitr::opts_chunk$set(echo = TRUE)
   
 ```{r}
 #load pkgs
-library(elli)
+library(tidyverse)
+library(here)
+library(janitor)
+
+library(caret)
+library(doParallel)
 ```
 
 
 ## Import Data ###################################
 
 ```{r}
-#read in data
+#read in iphone small matrix
+iphone_orig <- read.csv(here("data", "iphone_smallmatrix_labeled_8d.csv")) 
 
+# define copy of original data and clean names & remove empties
+iphone <- iphone_orig %>%
+  clean_names() %>% 
+  remove_empty()
 ```
 
 
 ## Parallel Processing ###########################
 ```{r}
+#get numberr of cores on my machine
+detectCores()
 
+# create cluster
+ppcluster <- makeCluster(3)
+
+#register cluster
+registerDoParallel(ppcluster)
+
+# get number of cores now assigned to R
+getDoParWorkers()
 ```
-
+When done working in R for the day, don't forget to stopCluster(ppcluster)
 
 
 # PRE-PROCESSING ################################
 
-Missing Values
-Anomolies
-Outliers
+```{r}
+#get overview of data
+glimpse(iphone)
+```
+
+## Remove Unrelated Variables ######################
+
+I see this dataset includes variables concerning mobile devices other than the iphone (e.g. nokia, samsung). So my first order of business is to remove any variables unrelated to iphones. 
+
+I know from examining the Helio sentiment analysis matrix detail spreadshet that **all** and **only** the variables concerning the iphone start with either "iphone" or "ios". So I will select only those columns. 
+
+```{r}
+#select only columns that start with iphone or ios
+iphone <- iphone %>% 
+  select(starts_with(c("iphone", "ios"))) 
+
+glimpse(iphone)
+```
+
+Now we have a tibble with 14 feature variables and 1 target (iphonesentiment) 
+
+
+## Missing Values #################################
+
+```{r}
+#check for missing values
+iphone %>% 
+  is.na() %>% 
+  sum()
+```
+There are no explicit NAs in the data. But it's also important to check for other values that might be representing missing values (e.g 999).
+
+```{r}
+iphone %>% 
+  map(unique)
+```
+None of the values in any of the columns look like substitues for NA.
+
+
+## Duplicates ###################################
+
+Technically, given that the website for each observation has been stripped and there's no other variable or set of variables that can be used to uniquely identify observations, there's no way to know for sure whether any of the observations in df are duplicates--it's possible observations with the same values for all variables are different websites which just happen to mention the iphone, camera, etc. the exact same number of times as another website. I don't know what the chances are of that happening across 15 variables, but it's probably very low. 
+
+And we know that reviews from one website are often re-published on other websites, so I'm going to to assume that observations with the same values for every variable are, in fact, duplicates that should be removed. 
+
+```{r}
+iphone %>% 
+  duplicated() %>% 
+  sum()
+```
+
+
+# EXPLORATION ##########################################
+
+## Histograms ################
+
+```{r}
+iphone %>% 
+  map(hist)
+```
 
 
 
