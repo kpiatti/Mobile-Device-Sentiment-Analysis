@@ -36,6 +36,8 @@ In this script I'll be wrangling and exploring just the data concerning iphones.
 library(tidyverse)
 library(here)
 library(janitor)
+library(corrr)
+library(GGally)
 
 library(caret)
 library(doParallel)
@@ -46,10 +48,10 @@ library(doParallel)
 
 ```{r}
 #read in iphone small matrix
-iphone_orig <- read.csv(here("data", "iphone_smallmatrix_labeled_8d.csv")) 
+iphone_df_orig <- read.csv(here("data", "iphone_smallmatrix_labeled_8d.csv")) 
 
 # define copy of original data and clean names & remove empties
-iphone <- iphone_orig %>%
+iphone_df <- iphone_df_orig %>%
   clean_names() %>% 
   remove_empty()
 ```
@@ -76,7 +78,7 @@ When done working in R for the day, don't forget to stopCluster(ppcluster)
 
 ```{r}
 #get overview of data
-glimpse(iphone)
+glimpse(iphone_df)
 ```
 
 ## Remove Unrelated Variables ######################
@@ -87,10 +89,10 @@ I know from examining the Helio sentiment analysis matrix detail spreadshet that
 
 ```{r}
 #select only columns that start with iphone or ios
-iphone <- iphone %>% 
+iphone_df <- iphone_df %>% 
   select(starts_with(c("iphone", "ios"))) 
 
-glimpse(iphone)
+glimpse(iphone_df)
 ```
 
 Now we have a tibble with 14 feature variables and 1 target (iphonesentiment) 
@@ -100,14 +102,14 @@ Now we have a tibble with 14 feature variables and 1 target (iphonesentiment)
 
 ```{r}
 #check for missing values
-iphone %>% 
+iphone_df %>% 
   is.na() %>% 
   sum()
 ```
 There are no explicit NAs in the data. But it's also important to check for other values that might be representing missing values (e.g 999).
 
 ```{r}
-iphone %>% 
+iphone_df %>% 
   map(unique)
 ```
 None of the values in any of the columns look like substitues for NA.
@@ -120,7 +122,7 @@ Technically, given that the website for each observation has been stripped and t
 And we know that reviews from one website are often re-published on other websites, so I'm going to to assume that observations with the same values for every variable are, in fact, duplicates that should be removed. 
 
 ```{r}
-iphone %>% 
+iphone_df %>% 
   duplicated() %>% 
   sum()
 ```
@@ -131,10 +133,129 @@ iphone %>%
 ## Histograms ################
 
 ```{r}
-iphone %>% 
+iphone_df %>% 
   map(hist)
 ```
 
+All of the independent variables have very skewed distributions swamped by zeros. Let's look at variance.
+
+
+## Feature Correlations #################################
+
+```{r}
+#get var correlations > 0.7 abd -0.7
+(corr <- iphone_df %>% 
+  correlate() %>% 
+  shave() %>% 
+  stretch() %>% 
+  filter(abs(r) > 0.7) %>% 
+  arrange(desc(r)))
+```
+
+It's surprising that variables representing positive and negative sentiment towards a particular iphone feature (e.g. display) are among those with the highest positive correlations. The variables in question record the number of positive or negative (respectively) words or expressions near the feature word (e.g. "display") or it's synonyms.
+
+Thus, the high positive correlation between these variables suggests as the number of positive words about the feature increases so too does the number of negative words about the feature. 
+
+It's also notable that none of the highest correlations are with our target variable--iphonesentiment.
+
+```{r}
+iphone_df %>% 
+  select(c(iphonedispos, iphonedisneg, iphonedisunc, iphonesentiment)) %>% 
+  ggpairs()
+```
+
+```{r}
+iphone_df %>% 
+  select(iphoneperpos, iphoneperneg, iphoneperunc, iphonesentiment) %>% 
+  ggpairs()
+```
+
+
+
+## Feature Variance ######################################
+
+```{r}
+#look for vars with near zero variance
+iphone_df %>% 
+  nearZeroVar(saveMetrics = TRUE) %>% 
+  arrange(nzv)
+```
+
+Since there's near zero variance in all the variables representing sentiment toward the iphone OS, those 4 variables are good candidates for removal. 
+
+
+## Recursive Feature Selection ##################################
+
+```{r}
+set.seed(123)
+
+#define 3,000 obs. sample
+iphone_sample <-  slice_sample(.data = iphone_df,
+             n = 3000, 
+             replace = FALSE)
+
+
+#move target variable to end
+iphone_sample <- iphone_sample %>% 
+  relocate(iphonesentiment,
+           .after = iosperunc)
+
+#set up rfe control with randomn forest and repeated CV
+ctrl <- rfeControl(functions = rfFuncs,
+                   method = "repeatedcv",
+                   repeats = 5, 
+                   verbose = FALSE)
+```
+
+
+```{r}
+set.seed(999)
+
+rfe_results <- rfe(iphone_sample[, 1:14], 
+                   iphone_sample$iphonesentiment, 
+                   rfeControl = ctrl)
+
+#get results
+rfe_results
+```
+
+The model with all 14 variable was selected as performing best on the sample data. 
+
+
+```{r}
+plot(rfe_results)
+```
+
+#  DV Data Type ################################################
+
+The dependent variable (iphonesentiment) is set as data type: integer because it contains values 1-5. However, those values correspond to different overall sentiment toward the iphone.
+    
+    * 0 = sentiment unclear
+    * 1 = negative
+    * 2 = somewhat negative
+    * 3 = neutral
+    * 4 = somewhat positive
+    * 5 = positive
+
+Given this, the data type of iphonesentiment should be changed to factor.
+
+```{r}
+iphone_df$iphonesentiment <-  as_factor(iphone_df$iphonesentiment)
+
+class(iphone_df$iphonesentiment)
+```
+
+```{r}
+iphone_df$iphonesentiment <- fct_recode(iphone_df$iphonesentiment,
+             unclear = "0",
+             neg = '1',
+             vneg = '2',
+             neutral = '3',
+             pos = '4',
+             vpos = '5')
+
+head(iphone_df$iphonesentiment)
+```
 
 
 
