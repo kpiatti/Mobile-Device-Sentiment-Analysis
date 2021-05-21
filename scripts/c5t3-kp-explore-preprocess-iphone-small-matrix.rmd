@@ -16,15 +16,12 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # SETUP ##########################################
-
+  
 ## Project Overview ##############################
 
-The goal of this project is to develop a model that represents how people feel (sentiment) about particular mobile devices based on what they say about those devices online. 
+The goal of this project is to use text mining to gather data on sentiments towards iPhone and Samsung Galaxy mobile devices from archived webpages from the CommonCrawl archive.
 
-
-## Current Goals ####################################
-
-In this script I'll be wrangling and exploring just the data concerning iphones.
+In this notebook I will be analyzing and modeling a small matrix of data just concerning sentiment toward iPhone devices. 
 
 
 ## Libraries & Renv #####################################
@@ -50,42 +47,29 @@ library(doParallel)
 #read in iphone small matrix
 iphone_df_orig <- read.csv(here("data", "iphone_smallmatrix_labeled_8d.csv")) 
 
-# define copy of original data and clean names & remove empties
+# define copy of original data, clean var names, & remove any empty columns or rows
 iphone_df <- iphone_df_orig %>%
   clean_names() %>% 
   remove_empty()
 ```
 
 
-## Parallel Processing ###########################
-```{r}
-#get numberr of cores on my machine
-detectCores()
 
-# create cluster
-ppcluster <- makeCluster(3)
-
-#register cluster
-registerDoParallel(ppcluster)
-
-# get number of cores now assigned to R
-getDoParWorkers()
-```
-When done working in R for the day, don't forget to stopCluster(ppcluster)
-
-
-# PRE-PROCESSING ################################
+# DATA WRANGLING ################################
 
 ```{r}
 #get overview of data
 glimpse(iphone_df)
 ```
 
-## Remove Unrelated Variables ######################
+The raw dataset contains **12, 973** rows (observations) and 59 columns (variables).
 
-I see this dataset includes variables concerning mobile devices other than the iphone (e.g. nokia, samsung). So my first order of business is to remove any variables unrelated to iphones. 
 
-I know from examining the Helio sentiment analysis matrix detail spreadshet that **all** and **only** the variables concerning the iphone start with either "iphone" or "ios". So I will select only those columns. 
+## Remove Irrelevant Variables ######################
+
+Many of the 59 variables in the raw dataset only contain data about mobile devices other than the iPhone (e.g. Nokia, Samsung) and thus are irrelevant for current purposes. So my first order of business is to remove all these irrelevant variables.
+
+  - I know from examining the supplemental information that came with the datatset (Helio_Sentiment_Analysis_Matrix_Detail.csv) that the names of **all** and **only** the relevant (iPhone) variables begin with either "iphone" or "ios". So I will select and keep only columns starting with either of those strings. 
 
 ```{r}
 #select only columns that start with iphone or ios
@@ -95,7 +79,7 @@ iphone_df <- iphone_df %>%
 glimpse(iphone_df)
 ```
 
-Now we have a tibble with 14 feature variables and 1 target (iphonesentiment) 
+Now the dataset contains only **15** variables.
 
 
 ## Missing Values #################################
@@ -106,38 +90,43 @@ iphone_df %>%
   is.na() %>% 
   sum()
 ```
-There are no explicit NAs in the data. But it's also important to check for other values that might be representing missing values (e.g 999).
+There are no explicit NAs in the data. However, since I don't know the protocol for entering missing values in this dataset, I also want to check for other values that might have been used to represent missing data (e.g 999).
 
 ```{r}
+# gat all the unique values in each var
 iphone_df %>% 
   map(unique)
 ```
-None of the values in any of the columns look like substitues for NA.
+*None of the values appear to be representing missing values. 
 
 
 ## Duplicates ###################################
 
-Technically, given that the website for each observation has been stripped and there's no other variable or set of variables that can be used to uniquely identify observations, there's no way to know for sure whether any of the observations in df are duplicates--it's possible observations with the same values for all variables are different websites which just happen to mention the iphone, camera, etc. the exact same number of times as another website. I don't know what the chances are of that happening across 15 variables, but it's probably very low. 
+Because the website addresses and no other uniquely identifying information has been retained, there is no way to definitively identify duplicate observations--it's possible observations with the same values for all variables are from genuinely different websites that just happen to be identical on all measured datapoints (e.g. mention the iphone camera the exact same number of times).
 
-And we know that reviews from one website are often re-published on other websites, so I'm going to to assume that observations with the same values for every variable are, in fact, duplicates that should be removed. 
+However, the probability of genuinely different websites having the exact same values across 15 measures may be very improbable, and we know that the one piece of content (e.g. a review) is commonly published/re-published on multiple different websites, thus identical rows may indeed bed genuine duplicates. 
+
+> *Note: In a real scenario (as opposed to a class project) I would avoid this problem by changing the data collection protocol to capture aned retain information that could be used to differentiate genuine from ersatz duplicates.*
 
 ```{r}
+#get number of dupe rows
 iphone_df %>% 
   duplicated() %>% 
   sum()
 ```
 
 
-# EXPLORATION ##########################################
-
-## Histograms ################
-
 ```{r}
+#keep only distinct rows
 iphone_df %>% 
-  map(hist)
+  distinct() %>% 
+  glimpse()
+
+iphone_distinct <- iphone_df %>% 
+  distinct()
 ```
 
-All of the independent variables have very skewed distributions swamped by zeros. Let's look at variance.
+# DATA EXPLORATION ######################################
 
 
 ## Feature Correlations #################################
@@ -226,6 +215,18 @@ The model with all 14 variable was selected as performing best on the sample dat
 plot(rfe_results)
 ```
 
+
+## Histograms ################
+
+```{r}
+iphone_df %>% 
+  map(hist)
+```
+
+All of the independent variables have very skewed distributions swamped by zeros. Let's look at variance.
+
+
+
 #  DV Data Type ################################################
 
 The dependent variable (iphonesentiment) is set as data type: integer because it contains values 1-5. However, those values correspond to different overall sentiment toward the iphone.
@@ -257,6 +258,25 @@ iphone_df$iphonesentiment <- fct_recode(iphone_df$iphonesentiment,
 head(iphone_df$iphonesentiment)
 ```
 
+
+## Parallel Processing ###########################
+
+Because the modeling process can be computationally taxing and my machine is not very powerful, to speed things up, I'm setting up parallel processing that enables R to use multiple cores to perform computations.
+
+```{r}
+#get numberr of cores on my machine
+detectCores()
+
+# create cluster
+ppcluster <- makeCluster(3)
+
+#register cluster
+registerDoParallel(ppcluster)
+
+# get number of cores now assigned to R
+getDoParWorkers()
+```
+When done working in R for the day, don't forget to stopCluster(ppcluster)
 
 
 
