@@ -62,7 +62,7 @@ iphone_df <- iphone_df_orig %>%
 glimpse(iphone_df)
 ```
 
-The raw dataset contains **12, 973** rows (observations) and 59 columns (variables).
+- The raw dataset contains **12, 973** rows (observations) and 59 columns (variables).
 
 
 ## Remove Irrelevant Variables ######################
@@ -79,7 +79,7 @@ iphone_df <- iphone_df %>%
 glimpse(iphone_df)
 ```
 
-Now the dataset contains only **15** variables.
+- Now the dataset contains only **15** variables.
 
 
 ## Missing Values #################################
@@ -90,14 +90,14 @@ iphone_df %>%
   is.na() %>% 
   sum()
 ```
-There are no explicit NAs in the data. However, since I don't know the protocol for entering missing values in this dataset, I also want to check for other values that might have been used to represent missing data (e.g 999).
+- There are no explicit NAs in the data. However, I don't know the protocol used for entering missing values in this dataset. So I also check for other values that might have been used to represent missing data (e.g 999).
 
 ```{r}
-# gat all the unique values in each var
+# return all unique values in each var
 iphone_df %>% 
   map(unique)
 ```
-*None of the values appear to be representing missing values. 
+- None of the values appear to be alternate representions for missing values. 
 
 
 ## Duplicates ###################################
@@ -126,13 +126,15 @@ iphone_distinct <- iphone_df %>%
   distinct()
 ```
 
-# DATA EXPLORATION ######################################
 
 
 ## Feature Correlations #################################
 
+Because highly correlated variables represent almost the same information, correlation analysis can be used for dimensionality reduction. 
+
+**Dataset with Duplicates**
 ```{r}
-#get var correlations > 0.7 abd -0.7
+#get var correlations > 0.7 and -0.7 for iphone_df
 (corr <- iphone_df %>% 
   correlate() %>% 
   shave() %>% 
@@ -141,90 +143,118 @@ iphone_distinct <- iphone_df %>%
   arrange(desc(r)))
 ```
 
-It's surprising that variables representing positive and negative sentiment towards a particular iphone feature (e.g. display) are among those with the highest positive correlations. The variables in question record the number of positive or negative (respectively) words or expressions near the feature word (e.g. "display") or it's synonyms.
+- It's surprising that the highest positive correlation is between *iosperpos* and *iosperneg* variables, the first represents counts of "the number of positive words or expressions that are present near terms referring to the iOS operating system", the second represents counts of the negative words or expressions near iOS terms.
 
-Thus, the high positive correlation between these variables suggests as the number of positive words about the feature increases so too does the number of negative words about the feature. 
+Thus, the high positive correlation between those variables suggests that as the number of positive words about iOS increases, the number of negative words about iOS also increases. The other highest  
+- This suggests either deep ambivalence toward the iphone iOS, or something probelmatic about text mining methodogy used to gather this data---given my background knowledge I am more inclined to think the second explanation is more probable. 
+- *Note: in a real world scenario, I would examine the raw text data and text mining code to resolve this issue.*
 
-It's also notable that none of the highest correlations are with our target variable--iphonesentiment.
 
 ```{r}
+# plot bivariate relationships & densities for display sentiment vars 
 iphone_df %>% 
-  select(c(iphonedispos, iphonedisneg, iphonedisunc, iphonesentiment)) %>% 
+  select(c(iphonedispos, iphonedisneg, iphonedisunc)) %>% 
   ggpairs()
 ```
 
 ```{r}
+# plot bivariate relationships & densities for performance & overall sentiment vars
 iphone_df %>% 
-  select(iphoneperpos, iphoneperneg, iphoneperunc, iphonesentiment) %>% 
+  select(iphoneperpos, iphoneperneg, iphoneperunc) %>% 
+  ggpairs()
+```
+- the above set of pair plots reveal that we are working with sparse data (i.e. variables that contain a high proportion of zero values).
+- does it mean anything that some of the data points are unnaturally lined up in the above plots (e.g. should I be suspicious that the data has been manufactured)?
+
+
+*Dataset without Duplicates*
+```{r}
+#get var correlations > 0.7 and -0.7 for iphone_df
+(corr <- iphone_distinct %>% 
+  correlate() %>% 
+  shave() %>% 
+  stretch() %>% 
+  filter(abs(r) > 0.7) %>% 
+  arrange(desc(r)))
+```
+
+```{r}
+# plot bivariate relationships & densities for display & overall sentiment vars 
+iphone_distinct %>% 
+  select(c(iphonedispos, iphonedisneg, iphonedisunc)) %>% 
   ggpairs()
 ```
 
+```{r}
+# plot bivariate relationships & densities for performance & overall sentiment vars
+iphone_distinct %>% 
+  select(iphoneperpos, iphoneperneg, iphoneperunc) %>% 
+  ggpairs()
+```
 
+- the variation in the data is easier to detect with the duplicated rows removed.
 
 ## Feature Variance ######################################
 
+*Data with Duplicates*
 ```{r}
 #look for vars with near zero variance
 iphone_df %>% 
   nearZeroVar(saveMetrics = TRUE) %>% 
-  arrange(nzv)
+  filter(nzv == "TRUE")
 ```
 
-Since there's near zero variance in all the variables representing sentiment toward the iphone OS, those 4 variables are good candidates for removal. 
 
+*Data without Duplicates*
+```{r}
+#look for vars with near zero variance
+iphone_distinct %>% 
+  nearZeroVar(saveMetrics = TRUE) %>% 
+  filter(nzv == "TRUE")
+```
+- Since the iOS variables are both highly correlated and have near zero variance, I will remove the iOS variables from both dataframes. 
 
-## Recursive Feature Selection ##################################
+### Remove iOS Sentiment Variables ##################
 
 ```{r}
-set.seed(123)
-
-#define 3,000 obs. sample
-iphone_sample <-  slice_sample(.data = iphone_df,
-             n = 3000, 
-             replace = FALSE)
-
-
-#move target variable to end
-iphone_sample <- iphone_sample %>% 
-  relocate(iphonesentiment,
-           .after = iosperunc)
-
-#set up rfe control with randomn forest and repeated CV
-ctrl <- rfeControl(functions = rfFuncs,
-                   method = "repeatedcv",
-                   repeats = 5, 
-                   verbose = FALSE)
+#remove iOS sentiment vars and move target var to last col
+iphone_df <- iphone_df %>% 
+  select(-c(iosperpos, iosperneg, iosperunc)) %>%
+  relocate(iphonesentiment, .after = ios) %>% 
+  glimpse()
 ```
 
 
 ```{r}
-set.seed(999)
-
-rfe_results <- rfe(iphone_sample[, 1:14], 
-                   iphone_sample$iphonesentiment, 
-                   rfeControl = ctrl)
-
-#get results
-rfe_results
+#remove iOS sentiment vars and move target var to last col
+iphone_distinct <- iphone_distinct %>% 
+  select(-c(iosperneg, iosperpos,iosperunc)) %>%
+  relocate(iphonesentiment, .after = ios) %>% 
+  glimpse()
 ```
 
-The model with all 14 variable was selected as performing best on the sample data. 
 
 
-```{r}
-plot(rfe_results)
-```
+- The including all 11 fezures had the best performance sample from the iphone_df data.
 
 
 ## Histograms ################
 
 ```{r}
+#create histograms of all vars in df with dupes
 iphone_df %>% 
   map(hist)
 ```
 
-All of the independent variables have very skewed distributions swamped by zeros. Let's look at variance.
+- All the feature variables have sparse distributions (i.e. a large proportion of zero values).
 
+```{r}
+#create histograms of all vars in df without dupes
+iphone_distinct %>% 
+  map(hist)
+```
+
+- As I was expecting, these histograms show slightly more variance. 
 
 
 #  DV Data Type ################################################
@@ -241,12 +271,15 @@ The dependent variable (iphonesentiment) is set as data type: integer because it
 Given this, the data type of iphonesentiment should be changed to factor.
 
 ```{r}
+#change dtype of iphonesentiment var to factor
 iphone_df$iphonesentiment <-  as_factor(iphone_df$iphonesentiment)
 
+# get dtype of var to verify change
 class(iphone_df$iphonesentiment)
 ```
 
 ```{r}
+#assign values in iphonesentiment to meaningful levels
 iphone_df$iphonesentiment <- fct_recode(iphone_df$iphonesentiment,
              unclear = "0",
              neg = '1',
@@ -255,11 +288,28 @@ iphone_df$iphonesentiment <- fct_recode(iphone_df$iphonesentiment,
              pos = '4',
              vpos = '5')
 
+#verify changes
 head(iphone_df$iphonesentiment)
 ```
 
 
-## Parallel Processing ###########################
+```{r}
+#change dtype of iphonesentiment var to factor
+iphone_distinct$iphonesentiment <-  as_factor(iphone_distinct$iphonesentiment)
+
+#assign values in iphonesentiment to meaningful levels
+iphone_distinct$iphonesentiment <- fct_recode(iphone_distinct$iphonesentiment,
+             unclear = "0",
+             neg = '1',
+             vneg = '2',
+             neutral = '3',
+             pos = '4',
+             vpos = '5')
+```
+
+
+
+# Parallel Processing ###########################
 
 Because the modeling process can be computationally taxing and my machine is not very powerful, to speed things up, I'm setting up parallel processing that enables R to use multiple cores to perform computations.
 
@@ -280,7 +330,203 @@ When done working in R for the day, don't forget to stopCluster(ppcluster)
 
 
 
+# MODELING #####################################
+
+The goal of this modeling exercise is to train a model that can correctly classify websites according to their overall sentiment towards iPhone devices.
+
+Because we are using a dataset where the overall sentiment of each website is known—a team of project assistants read each website and hand-coded the overall sentinment towards iphones for each one—this is a **supervised machine learning task**.
+
+As we saw earlier, the iphonesentiment variable—that stores the overall sentiment information—is a categorical (factor) type variable with 6 levels or categories (unclear, negative, somewhat negative, neutral, somewhat positive, or positive), so this a **multi-class classification problem** 
+
+## Data Subsets & Resampling Method  ############
+
+*Specify Partitions*
+```{r}
+set.seed(123)
+
+#specify 70/30 partition
+iphone_df_partition <- createDataPartition(iphone_df$iphonesentiment, 
+                                       p = .70,
+                                       list = FALSE)
+
+#specify 70/30 partition
+iphone_distinct_partition <- createDataPartition(iphone_distinct$iphonesentiment, 
+                                       p = .70,
+                                       list = FALSE)
+```
 
 
+*Create Training and Testing Subets*
+```{r}
+#use partition to create iphone_df training subset
+iphone_df_train <- iphone_df[iphone_df_partition,]
+
+#use partition to create iphone_df testing subset
+iphone_df_test <- iphone_df[-iphone_df_partition,]
+```
+
+
+```{r}
+#use partition to create iphone_distinct training subset
+iphone_distinct_train <- iphone_distinct[iphone_distinct_partition,]
+
+#use partition to create iphone_distinct testing subset
+iphone_distinct_test <- iphone_distinct[-iphone_distinct_partition,]
+```
+
+*Specify Resampling Method*
+```{r}
+#specify method and params fpr resampling
+mycontrol <- trainControl(
+  method = "cv",
+  number = 5, 
+  verboseIter = FALSE)
+```
+
+
+
+
+## Random Forest Models #########################
+
+Random forest models generate a large number of decision tree classification models built using slightly different inputs, which means results in exploring a broad search space. are popular because they tend to be robust to over-fitting. 
+
+*Train Models*
+```{r}
+#fit random forest model on iphone_df training subset
+system.time(rf_fit01 <- train(iphonesentiment ~.,
+                              data = iphone_df_train,
+                              method = "rf",
+                              trControl = mycontrol)) 
+
+print(rf_fit01)
+```
+```{r}
+#fit model on iphone_distinct training subset
+system.time(rf_fit02 <- train(iphonesentiment ~.,
+                              data = iphone_distinct_train,
+                              method = "rf",
+                              trControl = mycontrol)) 
+
+print(rf_fit02)
+```
+
+
+*Make Predictions*
+To get a more accurate picture of my models' performance, I will use them to predict iphonesentiment on the 30% test subsets.
+
+```{r}
+#iphone_df_test
+rf_fit01_preds <- predict(rf_fit01,
+                            newdata =  iphone_df_test,
+                            type = "raw")
+
+summary(rf_fit01_preds)
+```
+
+```{r}
+#iphone_distinct_test
+rf_fit02_preds <- predict(rf_fit02,
+                            newdata =  iphone_distinct_test,
+                            type = "raw")
+
+summary(rf_fit02_preds)
+```
+
+*Evaluate Model Performance*
+For classification, the most important performance metric is typically the accuracy of the model predictions. In other words, when we compare the iphonesentiment the model *predicted* for each website to the iphonesentiment project assistants hand-coded for each website (*ground truth*) what proportion did the model get right.
+
+```{r}
+# iphone_df_test model accuracy
+mean(rf_fit01_preds == iphone_df_test$iphonesentiment)
+```
+
+```{r}
+# model accuracy for iphone_distinct_test
+mean(rf_fit02_preds == iphone_distinct_test$iphonesentiment)
+```
+
+
+
+## SVM Models ###############################
+
+*Train Models*
+```{r}
+#train model on iphone_df training dataset
+system.time(svm_fit01 <- train(iphonesentiment ~.,
+                   data = iphone_df_train,
+                   method = "svmLinear2",
+                   trControl = mycontrol))
+print(svm_fit01)
+```
+
+```{r}
+#train model on iphone_distinct training data
+system.time(svm_fit02 <- train(iphonesentiment ~.,
+                   data = iphone_distinct_train,
+                   method = "svmLinear2",
+                   trControl = mycontrol))
+
+print(svm_fit02)
+```
+
+
+*Make Predictions on Test Subsets*
+
+```{r}
+#make predictions on iphone_df_test
+svm_fit01_preds <- svm_fit01 %>% 
+  predict(iphone_df_test)
+
+summary(svm_fit01_preds)
+```
+
+```{r}
+#make predictions on iphone_distinct_test
+svm_fit02_preds <- svm_fit02 %>% 
+  predict(iphone_distinct_test)
+
+summary(svm_fit02_preds)
+```
+
+
+*Evaluate Model Performance*
+```{r}
+#svm_fit01 predictions accuracy
+mean(svm_fit01_preds == iphone_df_test$iphonesentiment)
+```
+
+```{r}
+#svm_fit02 predictions accuracy
+mean(svm_fit02_preds == iphone_distinct_test$iphonesentiment)
+```
+
+
+## KKNN Models ################################
+
+
+## Naive Bayes Models ################################
+
+*Train Models*
+```{r}
+#train naive bayes model using iphone_df training subset
+nb_fit01 <- train(iphonesentiment ~.,
+                  data = iphone_df_train,
+                  method = "nb",
+                  trControl = mycontrol)
+
+print(nb_fit01)
+```
+
+```{r}
+#train naive bayes model using iphone_distinct_train
+nb_fit02 <- train(iphonesentiment ~.,
+                  data = iphone_distinct_train,
+                  methos = "nb",
+                  trControl = mycontrol)
+
+print(nb_fit02)
+```
+
+*
 
 
