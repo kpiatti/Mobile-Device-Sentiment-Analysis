@@ -1,0 +1,57 @@
+---
+title: "Preprocess & Explore iPhone Small Matrix"
+author: "Katherine Piatti"
+date: "4/29/2021"
+output: 
+ html_document:
+ theme: united
+ toc: TRUE
+ toc_depth: 2
+ toc_float: TRUE
+ highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# SETUP ##########################################
+  
+## Project Overview ##############################
+
+The goal of this project is to use text mining to gather data on sentiments towards iPhone and Samsung Galaxy mobile devices from archived webpages from the CommonCrawl archive.
+
+In this notebook I will be analyzing and modeling the iphone data from the large matrix of text mining data I gathered from a portion of the February 2021 CommonCrawl database. 
+
+
+## Packages & Renv #####################################
+
+  - I ran renv::init 2021-39-04 2:08PM
+  
+```{r}
+#load pkgs
+library(tidyverse)
+library(here)
+library(janitor)
+library(corrr)
+library(GGally)
+library(stargazer)
+library(lattice)
+
+library(broom)
+library(caret)
+library(MLmetrics)
+library(doParallel)
+```
+
+## Import Data #######################################
+
+```{r}
+#read in iphone small matrix
+lgiphone_df_orig <- read.csv(here("data", "LargeMatrix.csv")) 
+
+# define copy of original data, clean var names, & remove any empty columns or rows
+lgiphone_df <- lgiphone_df_orig %>%
+  clean_names() %>% 
+  remove_empty()
+```
