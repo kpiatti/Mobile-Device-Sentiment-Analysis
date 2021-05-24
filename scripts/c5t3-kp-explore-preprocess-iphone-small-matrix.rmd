@@ -995,3 +995,10 @@ confusionMatrix(data = c50_fit02_testing,
                 reference = iphone_distinct_test$iphonesentiment)
 ```
 
+# SUMMARY OBSERVATIONS ########################
+
+- Random forest and C5.0 models perform substantially better than the SVM and KKNN models.
+- The models trained using the subset with dupliccated rows (i.e. iphone_df) performed better than models trained using the subset without duplicated rows (i.e. iphone_distinct).
+  - However, the performance of the models trained on the subset with duplicated rows might be artificially inflated because 80% of rows are duplicated. 
+  - I will choose the model to use on the large matrix after seeing how many duplicated rows it has. 
+  
