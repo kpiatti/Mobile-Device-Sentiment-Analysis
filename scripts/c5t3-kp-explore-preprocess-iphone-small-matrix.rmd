@@ -531,30 +531,37 @@ rf_fit02.1_cv <- predict(rf_fit02.1, iphone_distinct_train)
 For classification, the most important performance metric is typically the accuracy of the prediction predictions. In other words, when we compare the iphonesentiment the model *predicted* for each website to the iphonesentiment project assistants hand-coded for each website (*ground truth*) what proportion did the model get right.
 
 __Accuracy & Kappa__
+
 ```{r}
 ##################### **iphone_df** ##################
 
-# prediction accuracy on training subset
-mean(rf_fit01_training == iphone_df_train$iphonesentiment)
+#return accuracy and kappa scores for training subset
+postResample(pred = rf_fit01_training,
+             obs = iphone_df_train$iphonesentiment)
 
-# prediction accuracy on testing subset
-mean(rf_fit01_testing == iphone_df_test$iphonesentiment)
+#return accuracy and kappa scores for cross validation
+postResample(pred = rf_fit01.1_cv,
+             obs = iphone_df_train$iphonesentiment)
 
-# prediction accuracy on cross validation
-mean(rf_fit01.1_cv == iphone_df_train$iphonesentiment)
+#return accuracy and kappa scores for testing subset
+postResample(pred = rf_fit01_testing,
+             obs = iphone_df_test$iphonesentiment)
 ```
 
 ```{r}
-################### **iphone_distinct** ################
+##################### **iphone_distinct** ##################
 
-# prediction accuracy on training subset
-mean(rf_fit02_training == iphone_distinct_train$iphonesentiment)
+#return accuracy and kappa scores for training subset
+postResample(pred = rf_fit02_training,
+             obs = iphone_distinct_train$iphonesentiment)
 
-# prediction accuracy on testing subset
-mean(rf_fit02_testing == iphone_distinct_test$iphonesentiment)
+#return accuracy and kappa scores for cross validation
+postResample(pred = rf_fit02.1_cv,
+             obs = iphone_distinct_train$iphonesentiment)
 
-# prediction accuracy on cross validation
-mean(rf_fit02.1_cv == iphone_distinct_train$iphonesentiment)
+#return accuracy and kappa scores for testing subset
+postResample(pred = rf_fit02_testing,
+             obs = iphone_distinct_test$iphonesentiment)
 ```
 
 __Obervations__
@@ -562,6 +569,7 @@ __Obervations__
 - as I would expect, the model predictions on the training data are the best, followed by the cross validated model, and the lowest accuracy score comes from the predictions made on the unseen test data.
 - the accuracy the first and last set of predictions is similar to the accuracy of predictions from models trained on the dataset with duplicates. 
 - However, the accuracy of predictions on the unseen test data is significantly lower. That makes sense since the model is encountering the same information over and over.
+
 
 
 __Confusion Marices__
@@ -582,10 +590,7 @@ confusionMatrix(data = rf_fit01_testing,
 confusionMatrix(data = rf_fit01.1_cv,
                 reference = iphone_df_train$iphonesentiment)
 ```
-```{r}
-postResample(pred = rf_fit01_testing,
-             obs = iphone_df_test$iphonesentiment)
-```
+
 
 
 
@@ -678,32 +683,42 @@ svm_fit02.1_cv <- svm_fit02.1 %>%
 
 
 ### *Evaluate Model Performance*
+
+__Accuracy & Kappa__
 ```{r}
 ##################### **iphone_df** ##################
 
-#prediction accuracy on training subset
-mean(svm_fit01_training == iphone_df_train$iphonesentiment)
+#return accuracy and kappa scores for training subset
+postResample(pred = svm_fit01_training,
+             obs = iphone_df_train$iphonesentiment)
 
-# prediction accuracy on testing subset
-mean(svm_fit01_testing == iphone_df_test$iphonesentiment)
+#return accuracy and kappa scores for cross validation
+postResample(pred = svm_fit01.1_cv,
+             obs = iphone_df_train$iphonesentiment)
 
-# prediction accuracy on cross validation
-mean(svm_fit01.1_cv == iphone_df_train$iphonesentiment)
+#return accuracy and kappa scores for testing subset
+postResample(pred = svm_fit01_testing,
+             obs = iphone_df_test$iphonesentiment)
 ```
-
 
 ```{r}
-################### **iphone_distinct** ################
+##################### **iphone_distinct** ##################
 
-# prediction accuracy on training subset
-mean(svm_fit02_training == iphone_distinct_train$iphonesentiment)
+#return accuracy and kappa scores for training subset
+postResample(pred = svm_fit02_training,
+             obs = iphone_distinct_train$iphonesentiment)
 
-# prediction accuracy on testing subset
-mean(svm_fit02_testing == iphone_distinct_test$iphonesentiment)
+#return accuracy and kappa scores for cross validation
+postResample(pred = svm_fit02.1_cv,
+             obs = iphone_distinct_train$iphonesentiment)
 
-# prediction accuracy on cross validation
-mean(svm_fit02.1_cv == iphone_distinct_train$iphonesentiment)
+#return accuracy and kappa scores for testing subset
+postResample(pred = svm_fit02_testing,
+             obs = iphone_distinct_test$iphonesentiment)
 ```
+
+
+
 
 
 
@@ -790,31 +805,42 @@ kknn_fit02.1_cv <- predict(kknn_fit02.1, iphone_distinct_train)
 
 
 ### *Evaluate Model Performance*
+
+__Accuracy & Kappa__
 ```{r}
 ##################### **iphone_df** ##################
 
-# prediction accuracy on training subset
-mean(kknn_fit01_training == iphone_df_train$iphonesentiment)
+#return accuracy and kappa scores for training subset
+postResample(pred = kknn_fit01_training,
+             obs = iphone_df_train$iphonesentiment)
 
-# prediction accuracy on testing subset
-mean(kknn_fit01_testing == iphone_df_test$iphonesentiment)
+#return accuracy and kappa scores for cross validation
+postResample(pred = kknn_fit01.1_cv,
+             obs = iphone_df_train$iphonesentiment)
 
-# prediction accuracy on cross validation
-mean(kknn_fit01.1_cv == iphone_df_train$iphonesentiment)
+#return accuracy and kappa scores for testing subset
+postResample(pred = kknn_fit01_testing,
+             obs = iphone_df_test$iphonesentiment)
 ```
 
 ```{r}
-################### **iphone_distinct** ################
+##################### **iphone_distinct** ##################
 
-# prediction accuracy on training subset
-mean(kknn_fit02_training == iphone_distinct_train$iphonesentiment)
+#return accuracy and kappa scores for training subset
+postResample(pred = kknn_fit02_training,
+             obs = iphone_distinct_train$iphonesentiment)
 
-# prediction accuracy on testing subset
-mean(kknn_fit02_testing == iphone_distinct_test$iphonesentiment)
+#return accuracy and kappa scores for cross validation
+postResample(pred = kknn_fit02.1_cv,
+             obs = iphone_distinct_train$iphonesentiment)
 
-# prediction accuracy on cross validation
-mean(kknn_fit02.1_cv == iphone_distinct_train$iphonesentiment)
+#return accuracy and kappa scores for testing subset
+postResample(pred = kknn_fit02_testing,
+             obs = iphone_distinct_test$iphonesentiment)
 ```
+
+
+
 
 __Observations__
 
@@ -901,30 +927,39 @@ c50_fit02.1_cv <- predict(c50_fit02.1, iphone_distinct_train)
 
 ### *Evaluate Model Performance*
 
-__Accuracy__
+__Accuracy & Kappa__
 ```{r}
 ##################### **iphone_df** ##################
 
-# prediction accuracy on training subset
-mean(c50_fit01_training == iphone_df_train$iphonesentiment)
+#return accuracy and kappa scores for training subset
+postResample(pred = c50_fit01_training,
+             obs = iphone_df_train$iphonesentiment)
 
-# prediction accuracy on testing subset
-mean(c50_fit01_testing == iphone_df_test$iphonesentiment)
+#return accuracy and kappa scores for cross validation
+postResample(pred = c50_fit01.1_cv,
+             obs = iphone_df_train$iphonesentiment)
 
-# prediction accuracy on cross validation
-mean(c50_fit01.1_cv == iphone_df_train$iphonesentiment)
+#return accuracy and kappa scores for testing subset
+postResample(pred = c50_fit01_testing,
+             obs = iphone_df_test$iphonesentiment)
 ```
 
 ```{r}
 ##################### **iphone_distinct** ##################
 
-# prediction accuracy on training subset
-mean(c50_fit02_training == iphone_distinct_train$iphonesentiment)
+#return accuracy and kappa scores for training subset
+postResample(pred = c50_fit02_training,
+             obs = iphone_distinct_train$iphonesentiment)
 
-# prediction accuracy on testing subset
-mean(c50_fit02_testing == iphone_distinct_test$iphonesentiment)
+#return accuracy and kappa scores for cross validation
+postResample(pred = c50_fit02.1_cv,
+             obs = iphone_distinct_train$iphonesentiment)
 
-# prediction accuracy on cross validation
-mean(c50_fit02.1_cv == iphone_distinct_train$iphonesentiment)
+#return accuracy and kappa scores for testing subset
+postResample(pred = c50_fit02_testing,
+             obs = iphone_distinct_test$iphonesentiment)
 ```
+
+
+
 

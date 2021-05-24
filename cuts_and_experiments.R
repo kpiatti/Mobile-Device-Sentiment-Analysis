@@ -137,3 +137,133 @@ nb_model_preds <- nb_model %>%
 mean(nb_model_preds == iphone_df_test$iphonesentiment)
 ## [1] 0.6457584
 
+
+#### CREATE TABLE TO COMPARE PERFORMANCE OF ALL MODELS
+table(rf_fit01, rf_fit02, rf_fit03) #doesn't work
+
+#try functions in broom pkg
+tidy(c(rf_fit01, rf_fit02)) # doesn't work
+
+glance(c("rf_fit01", "rf_fit02")) # doesn't work
+
+glance(c(rf_fit01, rf_fit02)) # doesn't work
+
+table(c(rf_fit01, rf_fit02)) #doesn't work
+
+broomify(rf_fit01) #doesn't work
+
+broomify(rf_fit01_preds) # doesn't work
+
+
+
+
+
+####### REPLACED ACCURACY CHUNKS ########
+
+#I found the postResample() function in measuring performance section of caret documentation. the postresample function returns both the accuracy and kappa scores for the model. 
+
+```{r}
+##################### **iphone_df** ##################
+
+# prediction accuracy on training subset
+mean(rf_fit01_training == iphone_df_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(rf_fit01_testing == iphone_df_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(rf_fit01.1_cv == iphone_df_train$iphonesentiment)
+```
+
+```{r}
+################### **iphone_distinct** ################
+
+# prediction accuracy on training subset
+mean(rf_fit02_training == iphone_distinct_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(rf_fit02_testing == iphone_distinct_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(rf_fit02.1_cv == iphone_distinct_train$iphonesentiment)
+```
+
+
+```{r}
+##################### **iphone_df** ##################
+
+#prediction accuracy on training subset
+mean(svm_fit01_training == iphone_df_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(svm_fit01_testing == iphone_df_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(svm_fit01.1_cv == iphone_df_train$iphonesentiment)
+```
+
+
+```{r}
+################### **iphone_distinct** ################
+
+# prediction accuracy on training subset
+mean(svm_fit02_training == iphone_distinct_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(svm_fit02_testing == iphone_distinct_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(svm_fit02.1_cv == iphone_distinct_train$iphonesentiment)
+```
+
+```{r}
+##################### **iphone_df** ##################
+
+# prediction accuracy on training subset
+mean(kknn_fit01_training == iphone_df_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(kknn_fit01_testing == iphone_df_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(kknn_fit01.1_cv == iphone_df_train$iphonesentiment)
+```
+
+```{r}
+################### **iphone_distinct** ################
+
+# prediction accuracy on training subset
+mean(kknn_fit02_training == iphone_distinct_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(kknn_fit02_testing == iphone_distinct_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(kknn_fit02.1_cv == iphone_distinct_train$iphonesentiment)
+```
+
+```{r}
+##################### **iphone_df** ##################
+
+# prediction accuracy on training subset
+mean(c50_fit01_training == iphone_df_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(c50_fit01_testing == iphone_df_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(c50_fit01.1_cv == iphone_df_train$iphonesentiment)
+```
+
+```{r}
+##################### **iphone_distinct** ##################
+
+# prediction accuracy on training subset
+mean(c50_fit02_training == iphone_distinct_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(c50_fit02_testing == iphone_distinct_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(c50_fit02.1_cv == iphone_distinct_train$iphonesentiment)
+```
