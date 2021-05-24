@@ -573,11 +573,7 @@ __Obervations__
 
 
 __Confusion Marices__
-```{r}
-#create confusion matrix for training subset predictions
-confusionMatrix(data = rf_fit01_training,
-                reference = iphone_df_train$iphonesentiment)
-```
+
 ```{r}
 #create confusion matrix for testing subset predictions
 confusionMatrix(data = rf_fit01_testing,
@@ -586,9 +582,10 @@ confusionMatrix(data = rf_fit01_testing,
 ```
 
 ```{r}
-#create confusion matrix for cross validated predictions
-confusionMatrix(data = rf_fit01.1_cv,
-                reference = iphone_df_train$iphonesentiment)
+#create confusion matrix for testing subset predictions
+confusionMatrix(data = rf_fit02_testing,
+                reference = iphone_distinct_test$iphonesentiment,
+                mode = "prec_recall")
 ```
 
 
@@ -717,9 +714,19 @@ postResample(pred = svm_fit02_testing,
              obs = iphone_distinct_test$iphonesentiment)
 ```
 
+__Confusion Matrices__
+```{r}
+#create confusion for test subset predictions
+confusionMatrix(data = svm_fit01_testing,
+                reference = iphone_df_test$iphonesentiment)
+```
 
-
-
+```{r}
+#create confusion matrix for testing subset predictions
+confusionMatrix(data = svm_fit02_testing,
+                reference = iphone_distinct_test$iphonesentiment,
+                mode = "prec_recall")
+```
 
 
 
@@ -839,13 +846,26 @@ postResample(pred = kknn_fit02_testing,
              obs = iphone_distinct_test$iphonesentiment)
 ```
 
-
-
-
 __Observations__
 
 - I am not surprised this model performs so poorly. We saw earlier that the data is very sparse, so it stands to reason that "neighboring" observations wouldn't contain much information for the model to learn from.
 - I expected the model trained on the dataset with duplicatted rows removed would perform better. KNN models predict the class of new observations based on the class(es) of the surrounding observations. Since the distinct dataset is less sparse, it stands to reason that the neighboring observations would provide more information the model could use to guess/predict the class of new observations. 
+
+
+__Confustion Matrices__
+```{r}
+#create confusion matrix for testing subset predictions
+confusionMatrix(data = kknn_fit01_testing,
+                reference = iphone_df_test$iphonesentiment,
+                mode = "prec_recall")
+```
+
+```{r}
+#create confusion matrix for testing subset predictions
+confusionMatrix(data = kknn_fit02_testing,
+                reference = iphone_distinct_test$iphonesentiment)
+```
+
 
 
 
@@ -961,5 +981,17 @@ postResample(pred = c50_fit02_testing,
 ```
 
 
+__Confusion Matricies__
+```{r}
+#create confusion matrix for testing subset predictions
+confusionMatrix(data = c50_fit01_testing,
+                reference = iphone_df_test$iphonesentiment,
+                mode = "prec_recall")
+```
 
+```{r}
+#create confusion matrix for testing subset predictions
+confusionMatrix(data = c50_fit02_testing,
+                reference = iphone_distinct_test$iphonesentiment)
+```
 
