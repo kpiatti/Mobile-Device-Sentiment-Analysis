@@ -24,7 +24,7 @@ The goal of this project is to use text mining to gather data on sentiments towa
 In this notebook I will be analyzing and modeling a small matrix of data just concerning sentiment toward iPhone devices. 
 
 
-## Libraries & Renv #####################################
+## Packages & Renv #####################################
 
   - I ran renv::init 2021-39-04 2:08PM
   
@@ -35,8 +35,12 @@ library(here)
 library(janitor)
 library(corrr)
 library(GGally)
+library(stargazer)
+library(lattice)
 
+library(broom)
 library(caret)
+library(MLmetrics)
 library(doParallel)
 ```
 
@@ -214,7 +218,7 @@ iphone_distinct %>%
 ```
 - Since the iOS variables are both highly correlated and have near zero variance, I will remove the iOS variables from both dataframes. 
 
-### Remove iOS Sentiment Variables ##################
+## Remove iOS Sentiment Variables ##################
 
 ```{r}
 #remove iOS sentiment vars and move target var to last col
@@ -236,6 +240,19 @@ iphone_distinct <- iphone_distinct %>%
 
 
 - The including all 11 fezures had the best performance sample from the iphone_df data.
+
+
+# DATA EXPLORATION ###############
+
+## Summary Stats ############
+
+```{r}
+stargazer(iphone_df, type = "text")
+```
+
+```{r}
+stargazer(iphone_distinct, type = "text")
+```
 
 
 ## Histograms ################
@@ -338,18 +355,19 @@ Because we are using a dataset where the overall sentiment of each website is kn
 
 As we saw earlier, the iphonesentiment variable—that stores the overall sentiment information—is a categorical (factor) type variable with 6 levels or categories (unclear, negative, somewhat negative, neutral, somewhat positive, or positive), so this a **multi-class classification problem** 
 
-## Data Subsets & Resampling Method  ############
+
+## *Data Splitting*  ############
 
 *Specify Partitions*
 ```{r}
 set.seed(123)
 
-#specify 70/30 partition
+#specify 70/30 partition for iphone_df
 iphone_df_partition <- createDataPartition(iphone_df$iphonesentiment, 
                                        p = .70,
                                        list = FALSE)
 
-#specify 70/30 partition
+#specify 70/30 partition for iphone_distinct
 iphone_distinct_partition <- createDataPartition(iphone_distinct$iphonesentiment, 
                                        p = .70,
                                        list = FALSE)
@@ -365,6 +383,21 @@ iphone_df_train <- iphone_df[iphone_df_partition,]
 iphone_df_test <- iphone_df[-iphone_df_partition,]
 ```
 
+```{r}
+#plot distribution of target var in full dataset
+b1 = barchart(iphone_df$iphonesentiment)
+
+#plot distribution of target var in training subset
+b2 = barchart(iphone_df_train$iphonesentiment)
+
+#plot distribution of target var in test subset
+b3 = barchart(iphone_df_test$iphonesentiment)
+
+print(b1, split = c(1,1,2,2), more = TRUE)
+print(b2, split = c(1,2,2,2), more = TRUE)
+print(b3, split = c(2,1,2,2))
+```
+
 
 ```{r}
 #use partition to create iphone_distinct training subset
@@ -374,75 +407,184 @@ iphone_distinct_train <- iphone_distinct[iphone_distinct_partition,]
 iphone_distinct_test <- iphone_distinct[-iphone_distinct_partition,]
 ```
 
-*Specify Resampling Method*
+```{r}
+#plot distribution of target var in full dataset
+b4 = barchart(iphone_distinct$iphonesentiment)
+
+#plot distribution of target var in training subset
+b5 = barchart(iphone_distinct_train$iphonesentiment)
+
+#plot distribution of target var in test subset
+b6 = barchart(iphone_distinct_test$iphonesentiment)
+
+print(b4, split = c(1,1,2,2), more = TRUE)
+print(b5, split = c(1,2,2,2), more = TRUE)
+print(b6, split = c(2,1,2,2))
+```
+
+__Observations__
+- I plotted the distributions for the target variable to verify that the sampling did not change the var distribution in training and testing subsets, and everything looks good. 
+
+
+## *Resampling Methods*
 ```{r}
 #specify method and params fpr resampling
 mycontrol <- trainControl(
   method = "cv",
   number = 5, 
   verboseIter = FALSE)
+
+#specify repeated cv method
+mycontrol2 <- trainControl(
+  method = "repeatedcv",
+  number = 5,
+  repeats = 3
+)
 ```
 
-
+For each of the following models I will do the following:
+  
+  1. Build and train the model on the training subsets for both the iphone_df (with duplicate rows) and iphone_distinct (without duplicate rows).
+  2. Use the m
 
 
 ## Random Forest Models #########################
 
 Random forest models generate a large number of decision tree classification models built using slightly different inputs, which means results in exploring a broad search space. are popular because they tend to be robust to over-fitting. 
 
-### *Train Models*
+### *Build Models*
 ```{r}
-#fit random forest model on iphone_df training subset
+##################### **iphone_df** ##################
+
+#build training model on iphone_df training subset
 system.time(rf_fit01 <- train(iphonesentiment ~.,
                               data = iphone_df_train,
                               method = "rf",
-                              trControl = mycontrol)) 
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = trainControl(method = "none"))) 
 
-print(rf_fit01)
+#build cv model
+system.time(rf_fit01.1 <- train(iphonesentiment ~.,
+                              data = iphone_df_train,
+                              method = "rf",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = mycontrol)) 
 ```
+
 ```{r}
-#fit model on iphone_distinct training subset
+################### **iphone_distinct** ################
+
+#build training model on iphone_distinct training subset
 system.time(rf_fit02 <- train(iphonesentiment ~.,
                               data = iphone_distinct_train,
                               method = "rf",
-                              trControl = mycontrol)) 
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = trainControl(method = "none"))) 
 
-print(rf_fit02)
+#build cv model
+system.time(rf_fit02.1 <- train(iphonesentiment ~.,
+                              data = iphone_distinct_train,
+                              method = "rf",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = mycontrol)) 
 ```
+
+
 
 
 ### *Make Predictions*
 To get a more accurate picture of my models' performance, I will use them to predict iphonesentiment on the 30% test subsets.
 
-```{r}
-#iphone_df_test
-rf_fit01_preds <- predict(rf_fit01,
-                            newdata =  iphone_df_test,
-                            type = "raw")
 
-summary(rf_fit01_preds)
+```{r}
+##################### **iphone_df** ##################
+
+#predict iphone_df_train
+rf_fit01_training <- predict(rf_fit01, iphone_df_train)
+
+#predict iphone_df_test
+rf_fit01_testing <- predict(rf_fit01, iphone_df_test)
+
+#perform cross-validation
+rf_fit01.1_cv <- predict(rf_fit01.1, iphone_df_train)
 ```
 
 ```{r}
-#iphone_distinct_test
-rf_fit02_preds <- predict(rf_fit02,
-                            newdata =  iphone_distinct_test,
-                            type = "raw")
+################### **iphone_distinct** ################
 
-summary(rf_fit02_preds)
+#predict iphone_distinct_train
+rf_fit02_training <- predict(rf_fit02, iphone_distinct_train)
+
+#predict iphone_distinct_test
+rf_fit02_testing <- predict(rf_fit02, iphone_distinct_test)
+
+#perform cross-validation
+rf_fit02.1_cv <- predict(rf_fit02.1, iphone_distinct_train)
 ```
+
 
 ### *Evaluate Model Performance*
-For classification, the most important performance metric is typically the accuracy of the model predictions. In other words, when we compare the iphonesentiment the model *predicted* for each website to the iphonesentiment project assistants hand-coded for each website (*ground truth*) what proportion did the model get right.
+For classification, the most important performance metric is typically the accuracy of the prediction predictions. In other words, when we compare the iphonesentiment the model *predicted* for each website to the iphonesentiment project assistants hand-coded for each website (*ground truth*) what proportion did the model get right.
 
+__Accuracy & Kappa__
 ```{r}
-# iphone_df_test model accuracy
-mean(rf_fit01_preds == iphone_df_test$iphonesentiment)
+##################### **iphone_df** ##################
+
+# prediction accuracy on training subset
+mean(rf_fit01_training == iphone_df_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(rf_fit01_testing == iphone_df_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(rf_fit01.1_cv == iphone_df_train$iphonesentiment)
 ```
 
 ```{r}
-# model accuracy for iphone_distinct_test
-mean(rf_fit02_preds == iphone_distinct_test$iphonesentiment)
+################### **iphone_distinct** ################
+
+# prediction accuracy on training subset
+mean(rf_fit02_training == iphone_distinct_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(rf_fit02_testing == iphone_distinct_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(rf_fit02.1_cv == iphone_distinct_train$iphonesentiment)
+```
+
+__Obervations__
+- the accuracy of predictions from the training, testing, and cross validation models are very simliar.
+- as I would expect, the model predictions on the training data are the best, followed by the cross validated model, and the lowest accuracy score comes from the predictions made on the unseen test data.
+- the accuracy the first and last set of predictions is similar to the accuracy of predictions from models trained on the dataset with duplicates. 
+- However, the accuracy of predictions on the unseen test data is significantly lower. That makes sense since the model is encountering the same information over and over.
+
+
+__Confusion Marices__
+```{r}
+#create confusion matrix for training subset predictions
+confusionMatrix(data = rf_fit01_training,
+                reference = iphone_df_train$iphonesentiment)
+```
+```{r}
+#create confusion matrix for testing subset predictions
+confusionMatrix(data = rf_fit01_testing,
+                reference = iphone_df_test$iphonesentiment,
+                mode = "prec_recall")
+```
+
+```{r}
+#create confusion matrix for cross validated predictions
+confusionMatrix(data = rf_fit01.1_cv,
+                reference = iphone_df_train$iphonesentiment)
+```
+```{r}
+postResample(pred = rf_fit01_testing,
+             obs = iphone_df_test$iphonesentiment)
 ```
 
 
@@ -450,54 +592,121 @@ mean(rf_fit02_preds == iphone_distinct_test$iphonesentiment)
 ## SVM Models ###############################
 
 ### *Train Models*
+
 ```{r}
-#train model on iphone_df training dataset
-system.time(svm_fit01 <- train(iphonesentiment ~.,
+##################### **iphone_df** ##################
+
+#build training model
+svm_fit01 <- train(iphonesentiment ~.,
                    data = iphone_df_train,
-                   method = "svmLinear2",
-                   trControl = mycontrol))
-print(svm_fit01)
+                   na.action = na.omit,
+                   method = "svmPoly",
+                   preProcessing = c("center", "scale"),
+                   trControl = trainControl(method = "none"),
+                   tuneGrid = data.frame(degree = 1, scale = 1, C = 1))
+
+
+#build cv model
+svm_fit01.1 <- train(iphonesentiment ~.,
+                   data = iphone_df_train,
+                   na.action = na.omit,
+                   method = "svmPoly",
+                   preProcessing = c("center", "scale"),
+                   trControl = mycontrol,
+                   tuneGrid = data.frame(degree = 1, scale = 1, C = 1))
 ```
 
 ```{r}
-#train model on iphone_distinct training data
-system.time(svm_fit02 <- train(iphonesentiment ~.,
+################### **iphone_distinct** ################
+
+#build training model
+svm_fit02 <- train(iphonesentiment ~.,
                    data = iphone_distinct_train,
-                   method = "svmLinear2",
-                   trControl = mycontrol))
+                   na.action = na.omit,
+                   method = "svmPoly",
+                   preProcessing = c("center", "scale"),
+                   trControl = trainControl(method = "none"),
+                   tuneGrid = data.frame(degree = 1, scale = 1, C = 1))
 
-print(svm_fit02)
+
+#build cv model
+svm_fit02.1 <- train(iphonesentiment ~.,
+                   data = iphone_distinct_train,
+                   na.action = na.omit,
+                   method = "svmPoly",
+                   preProcessing = c("center", "scale"),
+                   trControl = mycontrol,
+                   tuneGrid = data.frame(degree = 1, scale = 1, C = 1))
 ```
 
 
-### *Make Predictions on Test Subsets*
+
+
+### *Make Predictions*
 ```{r}
+##################### **iphone_df** ##################
+
+#make predictions on iphone_df_train
+svm_fit01_training <- svm_fit01 %>% 
+  predict(iphone_df_train)
+
 #make predictions on iphone_df_test
-svm_fit01_preds <- svm_fit01 %>% 
+svm_fit01_testing <- svm_fit01 %>% 
   predict(iphone_df_test)
 
-summary(svm_fit01_preds)
+#perform cross validation
+svm_fit01.1_cv <- svm_fit01.1 %>% 
+  predict(iphone_df_train)
 ```
 
 ```{r}
+################### **iphone_distinct** ################
+
+#make predictions on iphone_distinct_train
+svm_fit02_training <- svm_fit02 %>% 
+  predict(iphone_distinct_train)
+
 #make predictions on iphone_distinct_test
-svm_fit02_preds <- svm_fit02 %>% 
+svm_fit02_testing <- svm_fit02 %>% 
   predict(iphone_distinct_test)
 
-summary(svm_fit02_preds)
+#perform cross validation
+svm_fit02.1_cv <- svm_fit02.1 %>% 
+  predict(iphone_distinct_train)
 ```
+
 
 
 ### *Evaluate Model Performance*
 ```{r}
-#svm_fit01 predictions accuracy
-mean(svm_fit01_preds == iphone_df_test$iphonesentiment)
+##################### **iphone_df** ##################
+
+#prediction accuracy on training subset
+mean(svm_fit01_training == iphone_df_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(svm_fit01_testing == iphone_df_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(svm_fit01.1_cv == iphone_df_train$iphonesentiment)
 ```
 
+
 ```{r}
-#svm_fit02 predictions accuracy
-mean(svm_fit02_preds == iphone_distinct_test$iphonesentiment)
+################### **iphone_distinct** ################
+
+# prediction accuracy on training subset
+mean(svm_fit02_training == iphone_distinct_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(svm_fit02_testing == iphone_distinct_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(svm_fit02.1_cv == iphone_distinct_train$iphonesentiment)
 ```
+
+
+
 
 
 
@@ -508,105 +717,214 @@ mean(svm_fit02_preds == iphone_distinct_test$iphonesentiment)
 
 ### *Train Models*
 ```{r}
-#train weighted knn model using iphone_df training subset
-kknn_fit01 <- train(iphonesentiment ~.,
-                  data = iphone_df_train,
-                  method = "kknn",
-                  trControl = mycontrol)
+##################### **iphone_df** ##################
 
-print(kknn_fit01)
+#build training model on iphone_df training subset
+system.time(kknn_fit01 <- train(iphonesentiment ~.,
+                              data = iphone_df_train,
+                              method = "kknn",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = trainControl(method = "none"))) 
+
+#build cv model
+system.time(kknn_fit01.1 <- train(iphonesentiment ~.,
+                              data = iphone_df_train,
+                              method = "kknn",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = mycontrol)) 
 ```
-- I am not surprised this model performs so poorly. We saw earlier that the data is very sparse, so it stands to reason that "neighboring" observations wouldn't contain much information for the model to learn from.
+
 
 ```{r}
-#train weighted knn model using iphone_df training subset
-kknn_fit02 <- train(iphonesentiment ~.,
-                  data = iphone_distinct_train,
-                  method = "kknn",
-                  trControl = mycontrol)
+################### **iphone_distinct** ################
 
-print(kknn_fit02)
+#build training model on iphone_df training subset
+system.time(kknn_fit02 <- train(iphonesentiment ~.,
+                              data = iphone_distinct_train,
+                              method = "kknn",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = trainControl(method = "none"))) 
+
+#build cv model
+system.time(kknn_fit02.1 <- train(iphonesentiment ~.,
+                              data = iphone_distinct_train,
+                              method = "kknn",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = mycontrol)) 
 ```
-- I expected the model trained on the dataset with duplicatted rows removed would perform better. KNN models predict the class of new observations based on the class(es) of the surrounding observations. Since the distinct dataset is less sparse, it stands to reason that the neighboring observations would provide more information the model could use to guess/predict the class of new observations. 
 
-### *Make Predictions on Test Subsets*
+
+
+### *Make Predictions*
+
 ```{r}
-kknn_fit01_preds <- kknn_fit01 %>% 
-  predict(iphone_df_test)
+##################### **iphone_df** ##################
 
-summary(kknn_fit01_preds)
+#predict iphone_df_train
+kknn_fit01_training <- predict(kknn_fit01, iphone_df_train)
+
+#predict iphone_df_test
+kknn_fit01_testing <- predict(kknn_fit01, iphone_df_test)
+
+#perform cross-validation
+kknn_fit01.1_cv <- predict(kknn_fit01.1, iphone_df_train)
 ```
 
 ```{r}
-kknn_fit02_preds <- kknn_fit02 %>% 
-  predict(iphone_distinct_test)
+################### **iphone_distinct** ################
 
-summary(kknn_fit02_preds)
+#predict iphone_distinct_train
+kknn_fit02_training <- predict(kknn_fit02, iphone_distinct_train)
+
+#predict iphone_distinct_test
+kknn_fit02_testing <- predict(kknn_fit02, iphone_distinct_test)
+
+#perform cross-validation
+kknn_fit02.1_cv <- predict(kknn_fit02.1, iphone_distinct_train)
 ```
+
 
 
 ### *Evaluate Model Performance*
 ```{r}
-#calculate accuracy of model predictions
-mean(kknn_fit01_preds == iphone_df_test$iphonesentiment)
+##################### **iphone_df** ##################
+
+# prediction accuracy on training subset
+mean(kknn_fit01_training == iphone_df_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(kknn_fit01_testing == iphone_df_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(kknn_fit01.1_cv == iphone_df_train$iphonesentiment)
 ```
 
 ```{r}
-#calculate accuracy of model predictions
-mean(kknn_fit02_preds == iphone_distinct_test$iphonesentiment)
+################### **iphone_distinct** ################
+
+# prediction accuracy on training subset
+mean(kknn_fit02_training == iphone_distinct_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(kknn_fit02_testing == iphone_distinct_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(kknn_fit02.1_cv == iphone_distinct_train$iphonesentiment)
 ```
 
+__Observations__
 
-## Naive Bayes Models ################################
+- I am not surprised this model performs so poorly. We saw earlier that the data is very sparse, so it stands to reason that "neighboring" observations wouldn't contain much information for the model to learn from.
+- I expected the model trained on the dataset with duplicatted rows removed would perform better. KNN models predict the class of new observations based on the class(es) of the surrounding observations. Since the distinct dataset is less sparse, it stands to reason that the neighboring observations would provide more information the model could use to guess/predict the class of new observations. 
+
+
+
+
+## C5.0 Models ################################
 
 ### *Train Models*
 ```{r}
-#train naive bayes model using iphone_df training subset
-nb_fit01 <- train(iphonesentiment ~.,
-                  data = iphone_df_train,
-                  method = "nb",
-                  trControl = mycontrol)
+##################### **iphone_df** ##################
 
-print(nb_fit01)
+#build training model on iphone_df training subset
+system.time(c50_fit01 <- train(iphonesentiment ~.,
+                              data = iphone_df_train,
+                              method = "C5.0",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = trainControl(method = "none"),
+                              tuneGrid =  expand.grid( .winnow = c(TRUE), .trials=c(1), .model="tree" )))
+
+#build cv model
+system.time(c50_fit01.1 <- train(iphonesentiment ~.,
+                              data = iphone_df_train,
+                              method = "C5.0",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = mycontrol,
+                              tuneGrid = expand.grid( .winnow = c(TRUE), .trials=c(1, 5, 10, 15, 20), .model="tree" ))) 
 ```
 
 ```{r}
-#train naive bayes model using iphone_distinct_train
-nb_fit02 <- train(iphonesentiment ~.,
-                  data = iphone_distinct_train,
-                  method = "nb",
-                  trControl = mycontrol)
+##################### **iphone_distinct** ##################
 
-print(nb_fit02)
+#build training model on iphone_df training subset
+system.time(c50_fit02 <- train(iphonesentiment ~.,
+                              data = iphone_distinct_train,
+                              method = "C5.0",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = trainControl(method = "none"),
+                              tuneGrid =  expand.grid( .winnow = c(TRUE), .trials=c(1), .model="tree" )))
+
+#build cv model
+system.time(c50_fit02.1 <- train(iphonesentiment ~.,
+                              data = iphone_distinct_train,
+                              method = "C5.0",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = mycontrol,
+                              tuneGrid = expand.grid( .winnow = c(TRUE), .trials=c(1,5,10,15,20), .model="tree" ))) 
 ```
 
 ### *Make Predictions on Test Subsets*
 ```{r}
-#predict overall iphone sentiment for iphone_df_test
-nb_fit01_preds <- nb_fit01 %>% 
-  predict(iphone_df_test)
+##################### **iphone_df** ##################
 
-summary(nb_fit01_preds)
+#predict iphone_df_train
+c50_fit01_training <- predict(c50_fit01, iphone_df_train)
+
+#predict iphone_df_test
+c50_fit01_testing <- predict(c50_fit01, iphone_df_test)
+
+#perform cross-validation
+c50_fit01.1_cv <- predict(c50_fit01.1, iphone_df_train)
 ```
 
 ```{r}
-#predict overall iphone sentiment for iphone_distinct_test
-nb_fit02_preds <- nb_fit02 %>% 
-  predict(iphone_distinct_test)
+################### **iphone_distinct** ################
 
-summary(nb_fit02_preds)
+#predict iphone_distinct_train
+c50_fit02_training <- predict(c50_fit02, iphone_distinct_train)
+
+#predict iphone_distinct_test
+c50_fit02_testing <- predict(c50_fit02, iphone_distinct_test)
+
+#perform cross-validation
+c50_fit02.1_cv <- predict(c50_fit02.1, iphone_distinct_train)
 ```
 
 
 ### *Evaluate Model Performance*
 
+__Accuracy__
 ```{r}
-#nb_fit01 prediction accuracy
-mean(nb_fit02_preds == iphone_df_test$iphonesentiment)
+##################### **iphone_df** ##################
+
+# prediction accuracy on training subset
+mean(c50_fit01_training == iphone_df_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(c50_fit01_testing == iphone_df_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(c50_fit01.1_cv == iphone_df_train$iphonesentiment)
 ```
 
 ```{r}
-#nb_fit02 prediction accuracy
-mean(nb_fit02_preds == iphone_distinct_test$iphonesentiment)
+##################### **iphone_distinct** ##################
+
+# prediction accuracy on training subset
+mean(c50_fit02_training == iphone_distinct_train$iphonesentiment)
+
+# prediction accuracy on testing subset
+mean(c50_fit02_testing == iphone_distinct_test$iphonesentiment)
+
+# prediction accuracy on cross validation
+mean(c50_fit02.1_cv == iphone_distinct_train$iphonesentiment)
 ```
 
