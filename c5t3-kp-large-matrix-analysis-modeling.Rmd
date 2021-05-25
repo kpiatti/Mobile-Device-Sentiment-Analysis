@@ -13,6 +13,8 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+options(scipen = 1, digits = 3) #set to 3 decimal 
 ```
 
 # SETUP ##########################################
@@ -54,4 +56,231 @@ lgiphone_df_orig <- read.csv(here("data", "LargeMatrix.csv"))
 lgiphone_df <- lgiphone_df_orig %>%
   clean_names() %>% 
   remove_empty()
+
+#verify import
+glimpse(lgiphone_df)
 ```
+
+
+# DATA WRANGING #########
+
+The raw data has 30,701 rows and 59 columns.
+
+
+## Remove Irrelevant Variables #######
+
+```{r}
+#select only columns that start with iphone or ios
+lgiphone_df <- lgiphone_df %>% 
+  select(starts_with(c("iphone", "ios"))) 
+
+glimpse(lgiphone_df)
+```
+
+- The data now has 30,701 rows and 14 columns
+
+
+
+## Missing Values #####################
+
+```{r}
+#check for missing values
+lgiphone_df %>% 
+  is.na() %>% 
+  sum()
+```
+
+```{r}
+# return all unique values in each var
+lgiphone_df %>% 
+  map(unique)
+```
+
+
+
+## Duplicates #############
+
+```{r}
+#keep only distinct rows
+lgiphone_df %>% 
+  distinct() %>% 
+  glimpse()
+
+lgiphone_distinct <- lgiphone_df %>% 
+  distinct()
+```
+
+
+
+## Feature Correlations ############
+
+```{r}
+#get var correlations > 0.2 and -0.2 for iphone_df
+(corr <- lgiphone_df %>% 
+  correlate() %>% 
+  shave() %>% 
+  stretch() %>% 
+  filter(abs(r) > 0.2) %>% 
+  arrange(desc(r)))
+```
+_Observations_
+- It is notable that the high correlations between several iphone variables that we saw in the small iphone matrix are not present in this dataset. This is reason to doubt that the any model trained on the small matrix could predict overall iphone sentiment on this data. 
+
+
+```{r}
+# plot bivariate relationships & densities for display vars 
+lgiphone_df %>% 
+  select(c(iphonedispos, iphonedisneg, iphonedisunc)) %>% 
+  ggpairs()
+```
+
+```{r}
+# plot bivariate relationships & densities for performance vars
+lgiphone_df %>% 
+  select(iphoneperpos, iphoneperneg, iphoneperunc) %>% 
+  ggpairs()
+```
+
+_Observations_
+- There is something profoundly wrong with this data. 
+
+```{r}
+#get var correlations > 0.2 and -0.2 for iphone_df
+(corr <- lgiphone_distinct %>% 
+  correlate() %>% 
+  shave() %>% 
+  stretch() %>% 
+  filter(abs(r) > 0.2) %>% 
+  arrange(desc(r)))
+```
+
+
+
+
+## Feature Variances ###############
+
+*Data with Duplicates*
+```{r}
+#look for vars with near zero variance
+lgiphone_df %>% 
+  nearZeroVar(saveMetrics = TRUE) %>% 
+  filter(nzv == "TRUE")
+```
+
+*Data without Duplicates*
+```{r}
+#look for vars with near zero variance
+lgiphone_distinct %>% 
+  nearZeroVar(saveMetrics = TRUE) %>% 
+  filter(nzv == "TRUE")
+```
+
+
+
+
+## Remove iOS Sentiment Variables ##################
+
+```{r}
+#remove iOS sentiment vars 
+lgiphone_df <- lgiphone_df %>% 
+  select(-c(iosperpos, iosperneg, iosperunc)) %>%
+  glimpse()
+```
+
+```{r}
+#remove iOS sentiment vars
+lgiphone_df <- lgiphone_distinct %>% 
+  select(-c(iosperpos, iosperneg, iosperunc)) %>%
+  glimpse()
+```
+
+
+
+
+# DATA EXPLORATION ###############
+
+## Summary Stats ############
+
+```{r}
+stargazer(lgiphone_df, type = "text")
+```
+
+```{r}
+stargazer(lgiphone_distinct, type = "text")
+```
+
+
+
+## Histograms ################
+
+```{r}
+#create histograms of all vars in df with dupes
+lgiphone_df %>% 
+  map(hist)
+```
+
+```{r}
+#create histograms of all vars in df with dupes
+lgiphone_distinct %>% 
+  map(hist)
+```
+
+
+
+## Add Target Column ###############
+
+Because the overall sentiment towards iphones was not hand coded for this dataset, I need to add a "iphonesentiment" column to hold the model predictions
+
+```{r}
+#add iphonesentiment column to end of df
+lgiphone_df <- lgiphone_df %>% 
+  add_column(iphonesentiment = NA)
+
+#verify column added
+glimpse(lgiphone_df)
+```
+
+```{r}
+#add iphonesentiment column to end of df
+lgiphone_distinct <- lgiphone_df %>% 
+  add_column(iphonesentiment = NA)
+
+#verify column added
+glimpse(lgiphone_df)
+```
+
+>*Coding Note*
+>
+- You can add empty columns before or after other columns by adding .before = varname or .after = varname parameter to add_column func.
+
+
+
+# Parallel Processing ###########################
+
+```{r}
+#get numberr of cores on my machine
+detectCores()
+
+# create cluster
+ppcluster <- makeCluster(3)
+
+#register cluster
+registerDoParallel(ppcluster)
+
+# get number of cores now assigned to R
+getDoParWorkers()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
