@@ -101,6 +101,14 @@ lgiphone_df %>%
 ## Duplicates #############
 
 ```{r}
+#get total number of duplicates
+lgiphone_df %>% 
+  duplicated() %>% 
+  sum()
+```
+
+
+```{r}
 #keep only distinct rows
 lgiphone_df %>% 
   distinct() %>% 
@@ -274,13 +282,32 @@ getDoParWorkers()
 
 
 
+# PREDICT OVERALL SENTIMENT #####################################
+
+```{r}
+# use random rf_fit01.1 to predict iphone sentiment
+lgiphone_df_rfpreds <- predict(rf_fit02.1, lgiphone_df)
+
+#plot distribution of predicted sentiment
+rfpreds <- barchart(lgiphone_df_rfpreds,
+                    main = "rfpreds")
+```
+
+```{r}
+# use random rf_fit01.1 to predict iphone sentiment
+lgiphone_df_c50preds <- predict(c50_fit02.1, lgiphone_df)
+
+#plot distribution of predicted sentiment
+c50preds <- barchart(lgiphone_df_c50preds,
+                     main = "c50preds")
+```
+
+```{r}
+print(rfpreds, split = c(1,1,2,1), more = TRUE)
+print(c50preds, split = c(2,1,2,1), more = FALSE)
+```
 
 
+# SUMMARY ##################
 
-
-
-
-
-
-
-
+- Given how unusual characteristics of the data in my large matrix and how different it is from the data in the small iphone matrix, I do not think the predictions are trustworthy. 
