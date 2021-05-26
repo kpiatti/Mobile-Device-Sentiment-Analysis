@@ -1,5 +1,5 @@
 ---
-title: "Preprocess & Explore iPhone Small Matrix"
+title: "Preprocess & Explore Samsung Galaxy Small Matrix"
 author: "Katherine Piatti"
 date: "4/29/2021"
 output: 
@@ -52,14 +52,841 @@ library(doParallel)
 ## Import Data #######################################
 
 ```{r}
-#read in iphone small matrix
-galaxy_df_orig <- read.csv(here("data", "galaxy_smallmatrix_labeled_9d.csv")) 
+#read in samsung small matrix
+samsung_df_orig <- read.csv(here("data", "galaxy_smallmatrix_labeled_9d.csv")) 
 
 # define copy of original data, clean var names, & remove any empty cols/rows
-galaxy_df <- galaxy_df_orig %>%
+samsung_df <- samsung_df_orig %>%
   clean_names() %>% 
   remove_empty()
 
 #verify import
-glimpse(galaxy_df)
+glimpse(samsung_df)
 ```
+
+
+
+
+# DATA WRANGING #########
+
+The raw data has 12,911 rows and 59 columns.
+
+## Remove Irrelevant Variables #######
+
+I know from the supplemental documentation provided with the dataset (Helio_Sentiment_Analysis_Matrix_Details.csv) that all the variables concerning sentiment toward the Samsung Galaxy device or it's Google Android OS start with "samsung", "google", or "galaxy". So I will select just the variables starting with those strings.  
+
+```{r}
+#select only columns that start with samsung or google android
+samsung_df <- samsung_df %>% 
+  select(starts_with(c("samsung", "google", "galaxy"))) %>%
+  glimpse()
+```
+
+The data now has 12,911 rows and 15 columns. 
+
+
+
+
+## Remove Irrelevant Rows ############
+
+All the websites in the small matrix have been identified as reviewing or commenting on at least one of four different mobile devices: iPhone, Samsung, Nokia, or HTC. 
+
+But I am only interested in websites that are (at least in part) about Samsung Galaxy devices. So I will filter the data to return only rows representing websites where Samsung Galaxy appears at least once.
+
+```{r}
+#remove rows where samsunggalaxy = 0
+samsung_df <- samsung_df %>% 
+  filter(samsunggalaxy !=0) %>% 
+  glimpse()
+```
+
+The data now has 878 rows and 15 columns.
+
+
+## Missing Values #####################
+
+```{r}
+#check for missing values
+samsung_df %>% 
+  is.na() %>% 
+  sum()
+```
+
+```{r}
+# return all unique values in each var
+samsung_df %>% 
+  map(unique)
+```
+
+__Observations__
+There are a smaller number of unique values in this data compared to the iPhone small matrix.
+
+
+
+
+## Duplicates #############
+
+```{r}
+#get total number of duplicates
+samsung_df %>% 
+  duplicated() %>% 
+  sum()
+```
+
+__Observations__
+Given that 79% of the data is duplicates, it wouldn't be useful to analyze or model the data without duplicates. 
+
+
+
+
+## Feature Correlations ############
+
+```{r}
+#get var correlations > 0.2 and -0.2 for samsung_df
+(corr <- samsung_df %>% 
+  correlate() %>% 
+  shave() %>% 
+  stretch() %>% 
+  filter(abs(r) > 0.7) %>% 
+  arrange(desc(r)))
+```
+_Observations_
+- The Samsung sentiment variables are more highly correlated than the iPhone sentiment variables in the small matrix.
+- The highest correlated variables represent sentiment toward the Google Andriod OS, the device display, and the device performance, storage, speed, or performance. 
+
+```{r}
+# plot bivariate relationships between camera vars 
+samsung_df %>% 
+  select(c(samsungcampos, samsungcamneg, samsungcamunc)) %>% 
+  ggpairs()
+```
+
+```{r}
+# plot bivariate relationships between display vars 
+samsung_df %>% 
+  select(c(samsungdispos, samsungdisneg, samsungdisunc)) %>% 
+  ggpairs()
+```
+
+```{r}
+# plot bivariate relationships between performance vars
+samsung_df %>% 
+  select(samsungperpos, samsungperneg, samsungperunc) %>% 
+  ggpairs()
+```
+
+__Observations__
+- All sentiment variables appear to be positively correlated to at least some degree. 
+- This is somewhat surprising since this includes both variables representing positive and negative sentiment.  
+
+
+## Feature Variances ###############
+
+```{r}
+#look for vars with near zero variance
+samsung_df %>% 
+  nearZeroVar(saveMetrics = TRUE) %>% 
+  filter(nzv == "TRUE")
+```
+
+__Observations__
+- Since the samsunggalaxy variable represents the number of times the word "Samsung" is followed by the word "Galaxy" appears on the website, the near zero variance may just reflect the fact that websites only need to announce the device they are reviewing once.   
+
+
+
+# DATA EXPLORATION ###############
+
+## Summary Stats ############
+
+```{r}
+stargazer(samsung_df, type = "text")
+```
+__Observations__
+- It's noticable that both the 25th and 75th percentile values for 10 of 15 variables is 0.
+
+
+
+
+## Histograms ################
+
+```{r}
+#create histograms of galaxyID and camera vars in df with dupes
+h1 <- histogram(samsung_df$samsunggalaxy)
+h2 <- histogram(samsung_df$samsungcampos)
+h3 <- histogram(samsung_df$samsungcamneg)
+h4 <- histogram(samsung_df$samsungcamunc)
+
+print(h1, split = c(1,1,2,2), more = TRUE)
+print(h2, split = c(1,2,2,2), more = TRUE)
+print(h3, split = c(2,1,2,2), more = TRUE)
+print(h4, split = c(2,2,2,2))
+```
+
+```{r}
+#create histograms of the hardware performance vars in df with dupes
+h5 <- histogram(samsung_df$samsungperpos)
+h6 <- histogram(samsung_df$samsungperneg)
+h8 <- histogram(samsung_df$samsungperunc)
+
+print(h5, split = c(1,1,2,2), more = TRUE)
+print(h6, split = c(1,2,2,2), more = TRUE)
+print(h8, split = c(2,2,2,2))
+```
+
+```{r}
+#create histograms of the target and display vars in df with dupes
+h5 <- histogram(samsung_df$galaxysentiment)
+h6 <- histogram(samsung_df$samsungdispos)
+h7 <- histogram(samsung_df$samsungdisneg)
+h8 <- histogram(samsung_df$samsungdisunc)
+
+print(h5, split = c(1,1,2,2), more = TRUE)
+print(h6, split = c(1,2,2,2), more = TRUE)
+print(h7, split = c(2,1,2,2), more = TRUE)
+print(h8, split = c(2,2,2,2))
+```
+
+```{r}
+#create histograms of android os vars in df with dupes
+h5 <- histogram(samsung_df$googleandroid)
+h6 <- histogram(samsung_df$googleperpos)
+h7 <- histogram(samsung_df$googleperneg)
+h8 <- histogram(samsung_df$googleperunc)
+
+print(h5, split = c(1,1,2,2), more = TRUE)
+print(h6, split = c(1,2,2,2), more = TRUE)
+print(h7, split = c(2,1,2,2), more = TRUE)
+print(h8, split = c(2,2,2,2))
+```
+
+__Observation__
+- These histograms show the sparsity of this data.
+- The histogram of the galaxysentiment variable reveals that the majority of websites in the sample were hand-coded as having an overall unclear sentiment toward Samsung Galaxy Devices.
+- The unbalanced distribution in the target var will make the overall accuracy scores of models far less meaningful since model can achieve a relatively high overall accuracy merely by prediciting the class of every observation as unclear.
+- The distribution of for galaxysentiment and iphonesentiment are nearly identical, which I find somewhat suspicious.
+
+
+
+
+# Parallel Processing ###########################
+
+```{r}
+#get numberr of cores on my machine
+detectCores()
+
+# create cluster
+ppcluster <- makeCluster(3)
+
+#register cluster
+registerDoParallel(ppcluster)
+
+# get number of cores now assigned to R
+getDoParWorkers()
+```
+
+
+
+## DV Data Type ##########################################
+
+The dependent variable (galaxysentiment) needs to be changed from integer to categorical (factor) data type. The numeric values in the variable correspond to the following overall sentiments:
+    
+    * 0 = sentiment unclear
+    * 1 = negative
+    * 2 = somewhat negative
+    * 3 = neutral
+    * 4 = somewhat positive
+    * 5 = positive
+
+
+```{r}
+#change dtype of galaxysentiment to factor
+samsung_df$galaxysentiment <-  as_factor(samsung_df$galaxysentiment)
+
+# get dtype of var to verify change
+class(samsung_df$galaxysentiment)
+```
+
+```{r}
+#assign values in samsungsentiment to meaningful levels
+samsung_df$galaxysentiment <- fct_recode(samsung_df$galaxysentiment,
+             unclear = "0",
+             neg = '1',
+             vneg = '2',
+             neutral = '3',
+             pos = '4',
+             vpos = '5')
+
+#verify changes
+head(samsung_df$galaxysentiment)
+```
+
+
+
+
+
+# MODELING #####################################
+
+The goal of this modeling exercise is to train a model to accurately classify/label the overall sentiment towards Samsung Galaxy devices expressed in website content. Because the overall sentiment towards Samsung Galaxy devices is known in the data we'll be using to train the models this is a **supervised machine learning task**. 
+
+Ultimatly, the best trained model will be used predict overall Galaxy sentiment for websites in the large matrix of CommonCrawl data from February 2021.
+
+Because the galaxysentiment (target) variable is categorical (factor) type and has 6 levels (categories)—i.e. unclear, negative, somewhat negative, neutral, somewhat positive, or positive—this is a **multi-class classification problem** 
+
+
+## *Data Splitting*  ############
+
+*Specify Partitions*
+```{r}
+set.seed(123)
+
+#specify 70/30 partition for samsung_df
+samsung_df_partition <- createDataPartition(samsung_df$galaxysentiment, 
+                                       p = .70,
+                                       list = FALSE)
+```
+
+*Create Training and Testing Subets*
+```{r}
+#use partition to create samsung_df training subset
+samsung_df_train <- samsung_df[samsung_df_partition,]
+
+#use partition to create samsung_df testing subset
+samsung_df_test <- samsung_df[-samsung_df_partition,]
+```
+
+```{r}
+#plot distribution of target var in full dataset
+b1 = barchart(samsung_df$galaxysentiment,
+              main = "Full Dataset")
+
+#plot distribution of target var in training subset
+b2 = barchart(samsung_df_train$galaxysentiment,
+              main = "Training Subset")
+
+#plot distribution of target var in test subset
+b3 = barchart(samsung_df_test$galaxysentiment,
+              main = "Testing Subset")
+
+print(b1, split = c(1,1,2,2), more = TRUE)
+print(b2, split = c(1,2,2,2), more = TRUE)
+print(b3, split = c(2,1,2,2))
+```
+
+__Observations__
+- The almost identical distributions for the target variable in the full dataset, and the training and testing subsets shows that the data partitioning preserved the distribution present in the full dataset. 
+
+
+## *Resampling Method*
+```{r}
+#specify 5 fold cross validation resampling method
+mycontrol <- trainControl(
+  method = "cv",
+  number = 5, 
+  verboseIter = FALSE)
+```
+
+
+
+
+## Random Forest Models #########################
+
+Random forest models generate a large number of decision tree classification models built using slightly different inputs, which means results in exploring a broad search space. are popular because they tend to be robust to over-fitting. 
+
+
+
+### *Build Models* ##################################
+```{r}
+##################### **samsung_df** ##################
+
+#build training model on samsung_df training subset
+system.time(rf_fit11 <- train(galaxysentiment ~.,
+                              data = samsung_df_train,
+                              method = "rf",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = trainControl(method = "none"))) 
+
+#build cv model
+system.time(rf_fit11.1 <- train(galaxysentiment ~.,
+                              data = samsung_df_train,
+                              method = "rf",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = mycontrol)) 
+```
+
+
+
+### *Make Predictions*
+
+```{r}
+##################### **samsung_df** ##################
+
+#predict samsung_df_train
+rf_fit11_training <- predict(rf_fit11, samsung_df_train)
+
+#predict samsung_df_test
+rf_fit11_testing <- predict(rf_fit11, samsung_df_test)
+
+#perform cross-validation
+rf_fit11.1_cv <- predict(rf_fit11.1, samsung_df_train)
+```
+
+
+
+### *Evaluate Model Performance*
+
+__Accuracy & Kappa__
+
+```{r}
+##################### **samsung_df** ##################
+
+#return accuracy and kappa scores for training subset
+postResample(pred = rf_fit11_training,
+             obs = samsung_df_train$galaxysentiment)
+
+#return accuracy and kappa scores for cross validation
+postResample(pred = rf_fit11.1_cv,
+             obs = samsung_df_train$galaxysentiment)
+
+#return accuracy and kappa scores for testing subset
+postResample(pred = rf_fit11_testing,
+             obs = samsung_df_test$galaxysentiment)
+```
+
+__Observations__
+- The accuracy of predictions on the training and testing subsets, as well as the cross validated model are tightly clustered, that suggests the predictions on unseen data **with similar characteristics* (e.g. distributions) would have similar performance.
+- Although overall accuracy around 65% doesn't seem terrible, when viewed in conjunction with a kappa score of 11-22% (which takes into account the model's no information rate) it reveals the model's performance is not great.
+
+
+__Confusion Marices__
+
+```{r}
+#create confusion matrix for cv model predictions
+confusionMatrix(data = rf_fit11_testing,
+                reference = samsung_df_test$galaxysentiment)
+```
+
+__Observations__
+- The confusion matrix reveals that the model classified almost all observations in the test subset as having an overall unclear sentiment toward Samsung Galaxy devices. 
+- The accuracy of the model is only 3% better than it would be if the model had just classified every observation as unclear overall sentiment. 
+
+
+
+
+## C5.0 Models ################################
+
+### *Train Models*
+```{r}
+##################### **samsung_df** ##################
+
+#build training model on samsung_df training subset
+system.time(c50_fit11 <- train(galaxysentiment ~.,
+                              data = samsung_df_train,
+                              method = "C5.0",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = trainControl(method = "none"),
+                              tuneGrid =  expand.grid( .winnow = c(TRUE), .trials=c(1), .model="tree" )))
+
+#build cv model
+system.time(c50_fit11.1 <- train(galaxysentiment ~.,
+                              data = samsung_df_train,
+                              method = "C5.0",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = mycontrol,
+                              tuneGrid = expand.grid( .winnow = c(TRUE), .trials=c(1, 5, 10, 15, 20), .model="tree" ))) 
+```
+
+
+
+### *Make Predictions on Test Subsets*
+```{r}
+##################### **samsung_df** ##################
+
+#predict samsung_df_train
+c50_fit11_training <- predict(c50_fit11, samsung_df_train)
+
+#predict samsung_df_test
+c50_fit11_testing <- predict(c50_fit11, samsung_df_test)
+
+#perform cross-validation
+c50_fit11.1_cv <- predict(c50_fit11.1, samsung_df_train)
+```
+
+
+
+### *Evaluate Model Performance*
+
+__Accuracy & Kappa__
+```{r}
+##################### **samsung_df** ##################
+
+#return accuracy and kappa scores for training subset
+postResample(pred = c50_fit11_training,
+             obs = samsung_df_train$galaxysentiment)
+
+#return accuracy and kappa scores for cross validation
+postResample(pred = c50_fit11.1_cv,
+             obs = samsung_df_train$galaxysentiment)
+
+#return accuracy and kappa scores for testing subset
+postResample(pred = c50_fit11_testing,
+             obs = samsung_df_test$galaxysentiment)
+```
+
+
+__Confusion Matricies__
+```{r}
+#create confusion matrix for testing subset predictions
+confusionMatrix(data = c50_fit11_testing,
+                reference = samsung_df_test$galaxysentiment)
+```
+
+__Observations__
+- The performance of the C5.0 is very similar to the random forest model.
+- The same comments apply.
+
+
+## SVM Models ###############################
+
+### *Train Models*
+```{r}
+##################### **samsung_df** ##################
+
+#build training model
+svm_fit11 <- train(galaxysentiment ~.,
+                   data = samsung_df_train,
+                   na.action = na.omit,
+                   method = "svmPoly",
+                   preProcessing = c("center", "scale"),
+                   trControl = trainControl(method = "none"),
+                   tuneGrid = data.frame(degree = 1, scale = 1, C = 1))
+
+
+#build cv model
+svm_fit11.1 <- train(galaxysentiment ~.,
+                   data = samsung_df_train,
+                   na.action = na.omit,
+                   method = "svmPoly",
+                   preProcessing = c("center", "scale"),
+                   trControl = mycontrol,
+                   tuneGrid = data.frame(degree = 1, scale = 1, C = 1))
+```
+
+
+
+### *Make Predictions*
+```{r}
+##################### **samsung_df** ##################
+
+#make predictions on samsung_df_train
+svm_fit11_training <- svm_fit11 %>% 
+  predict(samsung_df_train)
+
+#make predictions on samsung_df_test
+svm_fit11_testing <- svm_fit11 %>% 
+  predict(samsung_df_test)
+
+#perform cross validation
+svm_fit11.1_cv <- svm_fit11.1 %>% 
+  predict(samsung_df_train)
+```
+
+
+
+### *Evaluate Model Performance*
+
+__Accuracy & Kappa__
+```{r}
+##################### **samsung_df** ##################
+
+#return accuracy and kappa scores for training subset
+postResample(pred = svm_fit11_training,
+             obs = samsung_df_train$galaxysentiment)
+
+#return accuracy and kappa scores for cross validation
+postResample(pred = svm_fit11.1_cv,
+             obs = samsung_df_train$galaxysentiment)
+
+#return accuracy and kappa scores for testing subset
+postResample(pred = svm_fit11_testing,
+             obs = samsung_df_test$galaxysentiment)
+```
+
+__Confusion Marix__
+
+```{r}
+#create confusion matrix for testing subset predictions
+confusionMatrix(data = svm_fit11_testing,
+                reference = samsung_df_test$galaxysentiment)
+```
+
+__Observations__
+- The SVM model improved accuracy of classifications by less than 1% over the no information rate—i.e. the accuracy that would be attained if every observation was just predicted to have the modal class/label, in this case "unclear".
+
+
+
+## KKNN Models ################################
+
+
+### *Train Models*
+```{r}
+##################### **iphone_df** ##################
+
+#build training model on iphone_df training subset
+system.time(kknn_fit11 <- train(galaxysentiment ~.,
+                              data = samsung_df_train,
+                              method = "kknn",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = trainControl(method = "none"))) 
+
+#build cv model
+system.time(kknn_fit11.1 <- train(galaxysentiment ~.,
+                              data = samsung_df_train,
+                              method = "kknn",
+                              na.action = na.omit,
+                              preProcess = c("center", "scale"),
+                              trControl = mycontrol)) 
+```
+
+
+
+
+### *Make Predictions*
+
+```{r}
+##################### **samsung_df** ##################
+
+#predict samsung_df_train
+kknn_fit11_training <- predict(kknn_fit11, samsung_df_train)
+
+#predict samsung_df_test
+kknn_fit11_testing <- predict(kknn_fit11, samsung_df_test)
+
+#perform cross-validation
+kknn_fit11.1_cv <- predict(kknn_fit11.1, samsung_df_train)
+```
+
+
+
+### *Evaluate Model Performance*
+
+__Accuracy & Kappa__
+```{r}
+##################### **samsung_df** ##################
+
+#return accuracy and kappa scores for training subset
+postResample(pred = kknn_fit11_training,
+             obs = samsung_df_train$galaxysentiment)
+
+#return accuracy and kappa scores for cross validation
+postResample(pred = kknn_fit11.1_cv,
+             obs = samsung_df_train$galaxysentiment)
+
+#return accuracy and kappa scores for testing subset
+postResample(pred = kknn_fit11_testing,
+             obs = samsung_df_test$galaxysentiment)
+```
+
+
+__Confusion Matricies__
+```{r}
+#create confusion matrix for testing subset predictions
+confusionMatrix(data = kknn_fit11_testing,
+                reference = samsung_df_test$galaxysentiment)
+```
+
+__Observations__
+- I'm not sure what to make of the fact that the accuracy of the KKNN model is lower than the no information rate, but the kappa scores for the models are 20% higher than the previous models tested. 
+- None of the models I've trained performed well enough to use for predicting overall sentiment on unseen data. There is no reason to trust the predictions.
+
+
+
+
+
+
+# LARGE MATRIX ANALYSIS & MODELING ########################
+
+## Import Data #######################################
+
+```{r}
+#read in samsung small matrix
+lgsamsung_df_orig <- read.csv(here("data", "LargeMatrix.csv")) 
+
+# define copy of original data, clean var names, & remove any empty columns or rows
+lgsamsung_df <- lgsamsung_df_orig %>%
+  clean_names() %>% 
+  remove_empty()
+
+#verify import
+glimpse(lgsamsung_df)
+````
+
+
+
+# DATA WRANGING #########
+
+The raw data has 30,701 rows and 59 columns. 
+
+
+## Remove Irrelevant Variables #######
+
+```{r}
+#select only columns that start with samsung or ios
+lgsamsung_df <- lgsamsung_df %>% 
+  select(starts_with(c("samsung", "google"))) %>%
+  glimpse()
+```
+
+- The data now has 30,701 rows and 14 columns
+
+
+## Remove Irrelevant Rows ############
+
+The large matrix contains data from a 30,701 websites contained in a selection of 210 wet files from the February 2021 CommonCrawl internet archive data.
+
+All the websites in the dataset have been identified as reviewing or commenting on at least one of four different mobile devices: iPhone, Samsung, Nokia, or HTC. 
+
+But I am only interested in websites that are, at least in part, about Samsung devices. So I will filter the data for all rows where Samsung Galaxy appears at least once.
+
+```{r}
+#filter data for rows where samsunggalaxy is not = 0
+lgsamsung_df <- lgsamsung_df %>% 
+  filter(samsunggalaxy != 0) %>% 
+  glimpse()
+```
+
+The dataset now has 1,424 rows and 14 columns.
+
+
+## Missing Values #####################
+
+```{r}
+#check for missing values
+lgsamsung_df %>% 
+  is.na() %>% 
+  sum()
+```
+
+```{r}
+# return all unique values in each var
+lgsamsung_df %>% 
+  map(unique)
+```
+
+__Observations__
+- 3 variables have zero variance, 1 has near zero variance.
+
+
+
+## Duplicates #############
+
+```{r}
+#get total number of duplicates
+lgsamsung_df %>% 
+  duplicated() %>% 
+  sum()
+```
+
+
+__Observations__
+- Like we saw with the small matrix, there are too many duplicate rows in the data to remove and still conduct meaningful analysis and modeling.
+
+
+
+
+
+## Feature Correlations ############
+
+```{r}
+#get var correlations > 0.2 and -0.2 for samsung_df
+(corr <- lgsamsung_df %>% 
+  correlate() %>% 
+  shave() %>% 
+  stretch() %>% 
+  filter(abs(r) > 0.2) %>% 
+  arrange(desc(r)))
+```
+_Observations_
+- It is notable that the high correlations between several samsung variables that we saw in the small samsung matrix are not present in this dataset. This is reason to doubt that the any model trained on the small matrix could predict overall samsung sentiment on this data. 
+
+
+```{r}
+# plot bivariate relationships & densities for display vars 
+lgsamsung_df %>% 
+  select(c(samsungdispos, samsungdisneg, samsungdisunc)) %>% 
+  ggpairs()
+```
+
+```{r}
+# plot bivariate relationships & densities for performance vars
+lgsamsung_df %>% 
+  select(samsungperpos, samsungperneg, samsungperunc) %>% 
+  ggpairs()
+```
+
+_Observations_
+- The above plots suggest something profoundly wrong with this data. 
+
+
+
+
+## Feature Variances ###############
+
+```{r}
+#look for vars with near zero variance
+lgsamsung_df %>% 
+  nearZeroVar(saveMetrics = TRUE) %>% 
+  filter(nzv == "TRUE")
+```
+
+
+
+
+# PREDICT OVERALL SENTIMENT #####################################
+
+```{r}
+# use random rf_fit01.1 to predict samsung sentiment
+lgsamsung_df_rfpreds <- predict(rf_fit11.1, lgsamsung_df)
+
+#plot distribution of predicted sentiment
+rfpreds <- barchart(lgsamsung_df_rfpreds,
+                    main = "rfpreds")
+```
+
+```{r}
+# use random rf_fit01.1 to predict samsung sentiment
+lgsamsung_df_c50preds <- predict(c50_fit11.1, lgsamsung_df)
+
+#plot distribution of predicted sentiment
+c50preds <- barchart(lgsamsung_df_c50preds,
+                     main = "c50preds")
+```
+
+```{r}
+print(rfpreds, split = c(1,1,2,1), more = TRUE)
+print(c50preds, split = c(2,1,2,1), more = FALSE)
+```
+
+
+# SUMMARY ##################
+
+- As noted above, given the poor performance of the trained models, we cannot trust it's predictions on unseen data. 
+- The above plots of the random forsest and C5.0 models reveals that the both models predicted every website in the sample has an unclear overall sentiment towards Samsung Galaxy devices. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
