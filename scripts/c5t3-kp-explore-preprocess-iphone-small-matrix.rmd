@@ -565,9 +565,9 @@ postResample(pred = rf_fit02_testing,
 ```
 
 __Obervations__
-- the accuracy of predictions from the training, testing, and cross validation models are very simliar.
-- as I would expect, the model predictions on the training data are the best, followed by the cross validated model, and the lowest accuracy score comes from the predictions made on the unseen test data.
-- the accuracy the first and last set of predictions is similar to the accuracy of predictions from models trained on the dataset with duplicates. 
+- The accuracy of predictions from the training, testing, and cross validation models are very simliar.
+- As I would expect, the model predictions on the training data are the best, followed by the cross validated model, and the lowest accuracy score comes from the predictions made on the unseen test data.
+- The accuracy the first and last set of predictions is similar to the accuracy of predictions from models trained on the dataset with duplicates. 
 - However, the accuracy of predictions on the unseen test data is significantly lower. That makes sense since the model is encountering the same information over and over.
 
 
