@@ -1,5 +1,5 @@
 ---
-title: "Preprocess & Explore iPhone Small Matrix"
+title: "Predict Overall iPhone Sentiment in February 2021 CommonCrawl Data"
 author: "Katherine Piatti"
 date: "4/29/2021"
 output: 
@@ -19,9 +19,7 @@ options(scipen = 1, digits = 3) #set to 3 decimal
 
 # SETUP ##########################################
   
-## Project Overview ##############################
-
-The goal of this project is to use text mining to gather data on sentiments towards iPhone and Samsung Galaxy mobile devices from archived webpages from the CommonCrawl archive.
+## Notebook Overview ##############################
 
 In this notebook I will be analyzing and modeling the iphone data from the large matrix of text mining data I gathered from a portion of the February 2021 CommonCrawl database. 
 
